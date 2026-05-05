@@ -1,0 +1,24 @@
+{
+  "items": [
+    {
+      "id": 1001,
+      "name": "Warrior",
+      "role": "tank",
+      "hp": 1200,
+      "unlock_id": ""
+    },
+    {
+      "id": 1002,
+      "name": "Mage",
+      "role": "damage",
+      "hp": 700,
+      "unlock_id": 1001
+    },
+    {
+      "id": 1002,
+      "role": "support",
+      "hp": "750",
+      "unlock_id": 9999
+    }
+  ]
+}
