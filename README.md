@@ -1,5 +1,9 @@
 # 🦌 DeerFlow - 2.0
 
+> Local fork goal: this repository is used as the base of `agent-code-change-platform`, an autumn-recruitment AI engineering project focused on project-based code change workflow, sandbox testing, diff explanation, and PR draft generation. The local MVP plan is documented in [docs/CODE_CHANGE_MVP_PLAN.md](docs/CODE_CHANGE_MVP_PLAN.md).
+>
+> Local V1 extension: `backend/packages/harness/deerflow/code_change/` adds a project-based task workflow CLI with project storage, repository scanning, context retrieval, test execution, task reports, timeline, and audit artifacts. See [docs/DEERFLOW_CODE_MAP.md](docs/DEERFLOW_CODE_MAP.md) and [docs/DEERFLOW_TEST_EVIDENCE.md](docs/DEERFLOW_TEST_EVIDENCE.md).
+
 English | [中文](./README_zh.md) | [日本語](./README_ja.md) | [Français](./README_fr.md) | [Русский](./README_ru.md)
 
 [![Python](https://img.shields.io/badge/Python-3.12%2B-3776AB?logo=python&logoColor=white)](./backend/pyproject.toml)

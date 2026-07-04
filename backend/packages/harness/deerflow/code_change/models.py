@@ -1,0 +1,128 @@
+from __future__ import annotations
+
+from dataclasses import asdict, dataclass, field
+from enum import StrEnum
+from pathlib import Path
+from typing import Any
+
+
+class TaskStatus(StrEnum):
+    CREATED = "CREATED"
+    PLANNING = "PLANNING"
+    RETRIEVING_CONTEXT = "RETRIEVING_CONTEXT"
+    RUNNING_TESTS = "RUNNING_TESTS"
+    REVIEWING = "REVIEWING"
+    FAILED = "FAILED"
+
+
+@dataclass(slots=True)
+class Project:
+    project_id: str
+    name: str
+    repo_path: str
+    test_command: str
+    repo_url: str = ""
+    default_branch: str = "main"
+    tech_stack: list[str] = field(default_factory=list)
+    memory: dict[str, Any] = field(default_factory=dict)
+    created_at: str = ""
+    updated_at: str = ""
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "Project":
+        return cls(**data)
+
+
+@dataclass(slots=True)
+class TaskStep:
+    name: str
+    status: str
+    summary: str = ""
+    error: str = ""
+    started_at: str = ""
+    finished_at: str = ""
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass(slots=True)
+class CodeFile:
+    path: str
+    language: str
+    size: int
+    summary: str = ""
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass(slots=True)
+class RetrievedContext:
+    path: str
+    score: int
+    reason: str
+    snippet: str
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass(slots=True)
+class TestResult:
+    command: str
+    exit_code: int
+    duration_seconds: float
+    log_path: str
+
+    @property
+    def passed(self) -> bool:
+        return self.exit_code == 0
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass(slots=True)
+class Task:
+    task_id: str
+    project_id: str
+    requirement: str
+    status: TaskStatus = TaskStatus.CREATED
+    steps: list[TaskStep] = field(default_factory=list)
+    contexts: list[RetrievedContext] = field(default_factory=list)
+    test_result: TestResult | None = None
+    artifact_dir: str = ""
+    created_at: str = ""
+    updated_at: str = ""
+    error: str = ""
+
+    def to_dict(self) -> dict[str, Any]:
+        data = asdict(self)
+        data["status"] = str(self.status)
+        return data
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "Task":
+        data = dict(data)
+        data["status"] = TaskStatus(data["status"])
+        data["steps"] = [TaskStep(**item) for item in data.get("steps", [])]
+        data["contexts"] = [RetrievedContext(**item) for item in data.get("contexts", [])]
+        if data.get("test_result"):
+            data["test_result"] = TestResult(**data["test_result"])
+        return cls(**data)
+
+
+def project_safe_name(name: str) -> str:
+    safe = "".join(ch if ch.isalnum() or ch in ("-", "_") else "-" for ch in name.strip())
+    return safe.strip("-_") or "project"
+
+
+def ensure_repo_path(path: str) -> str:
+    repo = Path(path).expanduser().resolve()
+    if not repo.exists() or not repo.is_dir():
+        raise ValueError(f"repo_path does not exist or is not a directory: {path}")
+    return str(repo)
