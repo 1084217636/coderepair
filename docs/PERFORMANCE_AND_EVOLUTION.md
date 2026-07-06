@@ -128,3 +128,60 @@ worker run-once 消费一个 QUEUED 任务
 4. 执行层接 Docker/DeerFlow sandbox，限制 CPU、内存、网络和文件系统范围。
 5. 增加任务指标：queued_count、running_count、duration、failure_rate。
 ```
+
+## V5：Worker 指标和失败重试基础
+
+当前能力：
+
+```text
+任务执行前记录 attempt_count / started_at
+  ↓
+任务结束记录 finished_at / last_error
+  ↓
+FAILED 且 attempt_count < max_attempts 时允许显式 retry
+  ↓
+retry 后重新进入 QUEUED
+  ↓
+metrics 输出 status_counts / queue_depth / failed_count / retryable_failed_count
+```
+
+新增入口：
+
+```bash
+python -m deerflow.code_change.cli task retry <project> <task_id>
+python -m deerflow.code_change.cli worker metrics --project <project>
+```
+
+HTTP 入口：
+
+```text
+POST /api/code-change/projects/{project_id}/tasks/{task_id}/retry
+GET  /api/code-change/metrics?project_id=<project_id>
+```
+
+相比 V4 的改进：
+
+```text
+1. 失败任务不再只能停在 FAILED，可以显式进入下一次 QUEUED。
+2. 每个任务记录 attempt_count / max_attempts / last_error，能解释重试边界。
+3. API 和 CLI 都能查看队列深度、失败数和可重试失败数。
+4. 测试覆盖成功任务、失败任务、retry、attempt exhausted 和 API metrics。
+```
+
+当前边界：
+
+```text
+1. retry 是手动触发，没有指数退避和自动重试调度。
+2. task_queue.jsonl 仍不适合多 worker 抢占。
+3. 没有 lease_until，worker 崩溃后不能自动回收执行中的任务。
+4. patch/test 仍在本机仓库执行，下一版必须进入 sandbox。
+```
+
+下一步优化：
+
+```text
+1. 接 Docker 或 DeerFlow sandbox，所有 patch/test 在临时工作区执行。
+2. 增加 lease_until / heartbeat / backoff / DLQ。
+3. 将 task.json 和 queue_log 迁移到 PostgreSQL 或 Redis Stream。
+4. metrics 对接 Prometheus，把任务失败率、测试耗时和重试次数可视化。
+```

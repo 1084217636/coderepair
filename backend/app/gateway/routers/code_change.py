@@ -13,7 +13,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel, Field
 
-from deerflow.code_change.worker import create_task, run_next_task, run_task_now
+from deerflow.code_change.worker import create_task, retry_task, run_next_task, run_task_now
 from deerflow.code_change.store import CodeChangeStore
 
 router = APIRouter(prefix="/api/code-change", tags=["code-change"])
@@ -95,12 +95,28 @@ def run_worker_once(store: CodeChangeStore = Depends(get_code_change_store)) -> 
     return task.to_dict()
 
 
+@router.get("/metrics", summary="Get Code Change Worker Metrics")
+def get_worker_metrics(project_id: str = "", store: CodeChangeStore = Depends(get_code_change_store)) -> dict:
+    return store.task_metrics(project_id or None)
+
+
 @router.get("/projects/{project_id}/tasks/{task_id}", summary="Get Code Change Task")
 def get_project_task(project_id: str, task_id: str, store: CodeChangeStore = Depends(get_code_change_store)) -> dict:
     task_path = store.project_dir(project_id) / "tasks" / task_id / "task.json"
     if not task_path.exists():
         raise HTTPException(status_code=404, detail=f"task not found: {task_id}")
     return json.loads(task_path.read_text(encoding="utf-8"))
+
+
+@router.post("/projects/{project_id}/tasks/{task_id}/retry", summary="Retry Failed Code Change Task")
+def retry_project_task(project_id: str, task_id: str, store: CodeChangeStore = Depends(get_code_change_store)) -> dict:
+    try:
+        task = retry_task(store, project_id, task_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return task.to_dict()
 
 
 @router.get(

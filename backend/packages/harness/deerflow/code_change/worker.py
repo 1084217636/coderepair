@@ -37,6 +37,7 @@ def create_task(
         patch_content = Path(patch_file).read_text(encoding="utf-8") if patch_file else patch_text
         (task_dir / REQUESTED_PATCH_NAME).write_text(patch_content, encoding="utf-8")
     if enqueue:
+        task.queued_at = now_iso()
         transition(task, TaskStatus.QUEUED, "Task queued for worker execution.")
         store.save_task(task)
         store.enqueue_task(task)
@@ -47,6 +48,9 @@ def execute_task(store: CodeChangeStore, task: Task) -> Task:
     project = store.get_project(task.project_id)
     task_dir = Path(task.artifact_dir)
     requested_patch = task_dir / REQUESTED_PATCH_NAME
+    task.attempt_count += 1
+    task.started_at = now_iso()
+    task.finished_at = ""
     try:
         if task.status is TaskStatus.QUEUED:
             transition(task, TaskStatus.PLANNING, "Worker picked up queued task.")
@@ -62,6 +66,7 @@ def execute_task(store: CodeChangeStore, task: Task) -> Task:
             task.patch_result = apply_patch_text(project.repo_path, requested_patch.read_text(encoding="utf-8"), task_dir)
             if not task.patch_result.applied:
                 transition(task, TaskStatus.FAILED, "Patch failed to apply.", error=task.patch_result.error)
+                task.finished_at = now_iso()
                 write_reports(task)
                 store.save_task(task)
                 return task
@@ -78,6 +83,7 @@ def execute_task(store: CodeChangeStore, task: Task) -> Task:
     except Exception as exc:
         if task.status is not TaskStatus.FAILED:
             transition(task, TaskStatus.FAILED, "Task failed.", error=str(exc))
+    task.finished_at = now_iso()
     write_reports(task)
     store.save_task(task)
     return task
@@ -97,3 +103,22 @@ def run_next_task(store: CodeChangeStore) -> Task | None:
         if task.status is TaskStatus.QUEUED:
             return execute_task(store, task)
     return None
+
+
+def retry_task(store: CodeChangeStore, project_id: str, task_id: str) -> Task:
+    task = store.get_task(project_id, task_id)
+    if task.status is not TaskStatus.FAILED:
+        raise ValueError(f"only FAILED tasks can be retried: {task.status}")
+    if task.attempt_count >= task.max_attempts:
+        raise ValueError(f"retry attempts exhausted: {task.attempt_count}/{task.max_attempts}")
+
+    task.error = ""
+    task.queued_at = now_iso()
+    transition(
+        task,
+        TaskStatus.QUEUED,
+        f"Retry queued after failure; next attempt {task.attempt_count + 1}/{task.max_attempts}.",
+    )
+    store.save_task(task)
+    store.enqueue_task(task)
+    return task

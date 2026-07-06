@@ -227,14 +227,63 @@ Worker run-once 消费任务
 
 这样更像公司里的研发效能平台：API 负责接需求和查询状态，Worker 负责长耗时执行。
 
-## 13. V4 还有哪些生产化不足？
+## 13. V5 怎么处理失败任务？
 
-当前 V4 是单机 MVP：
+V5 增加了显式 retry，而不是让失败任务停在 FAILED 后只能人工翻日志。
+
+```text
+FAILED
+  ↓
+POST /api/code-change/projects/{project_id}/tasks/{task_id}/retry
+  ↓
+QUEUED
+  ↓
+worker run-once
+  ↓
+PR_CREATED / FAILED
+```
+
+每个任务会记录：
+
+```text
+attempt_count
+max_attempts
+last_error
+queued_at
+started_at
+finished_at
+```
+
+这样面试时可以讲：我没有假设 AI 一次就能改对，而是把失败、重试、审计和人工介入都纳入任务流。
+
+## 14. V5 的 metrics 有什么用？
+
+metrics 用来回答平台运维问题：
+
+```text
+当前积压多少任务？
+失败任务有多少？
+哪些失败还能重试？
+哪些已经用完重试次数？
+总共执行了多少次 attempt？
+```
+
+当前接口：
+
+```text
+GET /api/code-change/metrics?project_id=demo
+```
+
+它还不是 Prometheus exporter，但已经把数据结构准备好了，后续可以平滑接入 Prometheus/Grafana。
+
+## 15. V5 还有哪些生产化不足？
+
+当前 V5 仍是单机 MVP：
 
 ```text
 1. task_queue.jsonl 不支持多 worker 分布式抢占。
 2. 没有 lease 和心跳，worker 崩溃后的任务恢复还没做。
-3. 没有 attempt_count、退避重试和 dead-letter。
+3. retry 是手动触发，没有退避策略和 dead-letter。
 4. patch/test 仍未进入 Docker 或 DeerFlow sandbox。
 ```
 

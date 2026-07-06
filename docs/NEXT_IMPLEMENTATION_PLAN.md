@@ -276,15 +276,34 @@ V4 当前边界：
 3. patch/test 仍未进入 Docker 或 DeerFlow sandbox。
 ```
 
-下一步 V5：
+V5 已落地：
 
 ```text
-1. 把 patch 执行放到 DeerFlow sandbox 或 Docker workspace。
-2. 增加失败任务二次修复入口。
-3. 为任务状态和耗时补指标。
+1. Task 增加 attempt_count / max_attempts / last_error / queued_at / started_at / finished_at。
+2. State machine 允许 FAILED -> QUEUED，用于显式 retry。
+3. Worker 新增 retry_task，失败任务可重新入队。
+4. CLI 新增 task retry 和 worker metrics。
+5. API 新增 /api/code-change/metrics 和 /projects/{project_id}/tasks/{task_id}/retry。
+6. Store 新增 list_tasks / task_metrics，输出 status_counts、queue_depth、failed_count、retryable_failed_count。
 ```
 
-### V6：回推 IM 群聊
+V5 当前边界：
+
+```text
+1. retry 仍是手动触发，没有自动退避调度。
+2. task_queue.jsonl 仍是单机队列，没有 lease 和 heartbeat。
+3. patch/test 仍未进入 Docker 或 DeerFlow sandbox。
+```
+
+下一步 V6：
+
+```text
+1. 把 patch/test 执行放到 DeerFlow sandbox 或 Docker workspace。
+2. 对测试命令增加超时、日志截断和资源限制。
+3. 失败后保留 repo diff、test.log、last_error，供二次修复 Agent 使用。
+```
+
+### V7：回推 IM 群聊
 
 目标：
 

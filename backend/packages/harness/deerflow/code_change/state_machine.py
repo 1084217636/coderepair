@@ -14,7 +14,7 @@ ALLOWED_TRANSITIONS: dict[TaskStatus, set[TaskStatus]] = {
     TaskStatus.RUNNING_TESTS: {TaskStatus.REVIEWING, TaskStatus.FAILED},
     TaskStatus.REVIEWING: {TaskStatus.PR_CREATED, TaskStatus.FAILED},
     TaskStatus.PR_CREATED: set(),
-    TaskStatus.FAILED: set(),
+    TaskStatus.FAILED: {TaskStatus.QUEUED},
     TaskStatus.ROLLED_BACK: set(),
 }
 
@@ -41,3 +41,4 @@ def transition(task: Task, next_status: TaskStatus, summary: str = "", error: st
     )
     if error:
         task.error = error
+        task.last_error = error

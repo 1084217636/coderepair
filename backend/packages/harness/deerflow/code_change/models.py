@@ -121,6 +121,12 @@ class Task:
     created_at: str = ""
     updated_at: str = ""
     error: str = ""
+    attempt_count: int = 0
+    max_attempts: int = 2
+    last_error: str = ""
+    queued_at: str = ""
+    started_at: str = ""
+    finished_at: str = ""
 
     def to_dict(self) -> dict[str, Any]:
         data = asdict(self)

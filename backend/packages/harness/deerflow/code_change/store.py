@@ -6,7 +6,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from uuid import uuid4
 
-from deerflow.code_change.models import Project, Task, ensure_repo_path, project_safe_name
+from deerflow.code_change.models import Project, Task, TaskStatus, ensure_repo_path, project_safe_name
 
 
 def now_iso() -> str:
@@ -65,6 +65,48 @@ class CodeChangeStore:
         if not task_path.exists():
             raise KeyError(f"task not found: {task_id}")
         return Task.from_dict(self._read_json(task_path))
+
+    def list_tasks(self, project_id: str | None = None) -> list[Task]:
+        if project_id:
+            project_ids = [project_safe_name(project_id)]
+        else:
+            project_ids = list(self._load_index().keys())
+
+        tasks: list[Task] = []
+        for pid in project_ids:
+            tasks_dir = self.project_dir(pid) / "tasks"
+            if not tasks_dir.exists():
+                continue
+            for task_path in sorted(tasks_dir.glob("*/task.json")):
+                tasks.append(Task.from_dict(self._read_json(task_path)))
+        return tasks
+
+    def task_metrics(self, project_id: str | None = None) -> dict:
+        tasks = self.list_tasks(project_id)
+        status_counts = {str(status): 0 for status in TaskStatus}
+        for task in tasks:
+            status_counts[str(task.status)] = status_counts.get(str(task.status), 0) + 1
+
+        retryable_failed = [
+            task
+            for task in tasks
+            if task.status is TaskStatus.FAILED and task.attempt_count < task.max_attempts
+        ]
+        exhausted_failed = [
+            task
+            for task in tasks
+            if task.status is TaskStatus.FAILED and task.attempt_count >= task.max_attempts
+        ]
+        return {
+            "project_id": project_safe_name(project_id) if project_id else "",
+            "total_tasks": len(tasks),
+            "status_counts": status_counts,
+            "queue_depth": status_counts.get(str(TaskStatus.QUEUED), 0),
+            "failed_count": status_counts.get(str(TaskStatus.FAILED), 0),
+            "retryable_failed_count": len(retryable_failed),
+            "exhausted_failed_count": len(exhausted_failed),
+            "attempts_total": sum(task.attempt_count for task in tasks),
+        }
 
     def new_task_dir(self, project_id: str) -> Path:
         task_id = "task_" + datetime.now(UTC).strftime("%Y%m%d_%H%M%S_") + uuid4().hex[:8]

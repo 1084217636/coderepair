@@ -290,6 +290,7 @@ create_task
 execute_task
 run_task_now
 run_next_task
+retry_task
 ```
 
 数据结构：
@@ -304,7 +305,8 @@ timeline.jsonl
 当前边界：
 
 ```text
-V4 是单机 JSONL 队列，适合演示架构演进；多 worker 并发、租约、重试和死信队列留到后续生产化版本。
+V5 增加了手动 retry、attempt_count 和 metrics，但队列仍是单机 JSONL。
+多 worker 并发、租约、退避重试和死信队列留到后续生产化版本。
 ```
 
 面试价值：
@@ -313,7 +315,48 @@ V4 是单机 JSONL 队列，适合演示架构演进；多 worker 并发、租�
 能解释为什么 V3 同步 API 会阻塞，以及如何演进成公司里的 Task Service + Worker 模式。
 ```
 
-当前边界：
+## 11. Worker Metrics
+
+位置：
+
+```text
+backend/packages/harness/deerflow/code_change/store.py
+backend/app/gateway/routers/code_change.py
+```
+
+职责：
+
+```text
+统计当前项目或全局任务状态，给控制台、运维面板和面试演示提供可观察性入口。
+```
+
+关键函数：
+
+```text
+CodeChangeStore.list_tasks
+CodeChangeStore.task_metrics
+GET /api/code-change/metrics
+```
+
+核心指标：
+
+```text
+total_tasks
+status_counts
+queue_depth
+failed_count
+retryable_failed_count
+exhausted_failed_count
+attempts_total
+```
+
+面试价值：
+
+```text
+能说明平台不只是“让 Agent 跑一下”，而是把任务状态、失败率和队列积压作为研发效能系统的一部分来观察。
+```
+
+## 12. V3 API 当前边界
 
 ```text
 V3 仍同步执行任务，适合演示和本地平台闭环；生产化需要任务队列和 worker。

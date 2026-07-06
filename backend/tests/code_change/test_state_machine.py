@@ -33,3 +33,13 @@ def test_state_machine_rejects_skipped_stage():
 
     with pytest.raises(InvalidTransition):
         transition(task, TaskStatus.REVIEWING)
+
+
+def test_state_machine_allows_failed_task_retry_queue():
+    task = Task(task_id="t1", project_id="demo", requirement="run tests")
+
+    transition(task, TaskStatus.FAILED, "failed", error="boom")
+    transition(task, TaskStatus.QUEUED, "retry")
+
+    assert task.status == TaskStatus.QUEUED
+    assert task.last_error == "boom"

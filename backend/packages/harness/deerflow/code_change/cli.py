@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import argparse
+import json
+
 from deerflow.code_change.models import Task
 from deerflow.code_change.store import CodeChangeStore
-from deerflow.code_change.worker import create_task, run_next_task, run_task_now
+from deerflow.code_change.worker import create_task, retry_task, run_next_task, run_task_now
 
 
 def main() -> None:
@@ -33,10 +35,15 @@ def main() -> None:
     enqueue.add_argument("project")
     enqueue.add_argument("requirement")
     enqueue.add_argument("--patch-file", default="", help="Unified diff to apply in worker")
+    retry = task_sub.add_parser("retry")
+    retry.add_argument("project")
+    retry.add_argument("task_id")
 
     worker = sub.add_parser("worker")
     worker_sub = worker.add_subparsers(dest="action", required=True)
     worker_sub.add_parser("run-once")
+    metrics = worker_sub.add_parser("metrics")
+    metrics.add_argument("--project", default="")
 
     args = parser.parse_args()
     store = CodeChangeStore(args.home)
@@ -64,12 +71,20 @@ def main() -> None:
         task = create_task(store, args.project, args.requirement, patch_file=args.patch_file, enqueue=True)
         print(f"task={task.task_id} status={task.status} artifacts={task.artifact_dir}")
         return
+    if args.resource == "task" and args.action == "retry":
+        task = retry_task(store, args.project, args.task_id)
+        print(f"task={task.task_id} status={task.status} attempts={task.attempt_count}/{task.max_attempts}")
+        return
     if args.resource == "worker" and args.action == "run-once":
         task = run_next_task(store)
         if task is None:
             print("worker=noop")
         else:
             print(f"task={task.task_id} status={task.status} artifacts={task.artifact_dir}")
+        return
+    if args.resource == "worker" and args.action == "metrics":
+        metrics = store.task_metrics(args.project or None)
+        print(json.dumps(metrics, ensure_ascii=False, indent=2))
         return
 
 

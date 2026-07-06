@@ -50,6 +50,7 @@ def test_code_change_router_runs_patch_task(tmp_path):
     assert worker_resp.status_code == 200
     task = worker_resp.json()
     assert task["status"] == "PR_CREATED"
+    assert task["attempt_count"] == 1
     assert task["patch_result"]["changed_files"] == ["app.py"]
 
     task_id = task["task_id"]
@@ -68,3 +69,56 @@ def test_code_change_router_runs_patch_task(tmp_path):
     timeline_resp = client.get("/api/code-change/projects/demo/timeline")
     assert timeline_resp.status_code == 200
     assert len(timeline_resp.json()["events"]) >= 2
+
+    metrics_resp = client.get("/api/code-change/metrics?project_id=demo")
+    assert metrics_resp.status_code == 200
+    assert metrics_resp.json()["status_counts"]["PR_CREATED"] == 1
+
+
+def test_code_change_router_retries_failed_task(tmp_path):
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    subprocess.run(["git", "init"], cwd=repo, check=True, stdout=subprocess.PIPE)
+    (repo / "app.py").write_text("def health():\n    return 'bad'\n", encoding="utf-8")
+
+    store = CodeChangeStore(tmp_path / "state")
+    app = FastAPI()
+    app.dependency_overrides[code_change.get_code_change_store] = lambda: store
+    app.include_router(code_change.router)
+    client = TestClient(app)
+
+    assert client.post(
+        "/api/code-change/projects",
+        json={
+            "name": "demo",
+            "repo_path": str(repo),
+            "test_command": "python3 -c \"print('tests ok')\"",
+        },
+    ).status_code == 200
+
+    bad_patch = """diff --git a/app.py b/app.py
+--- a/app.py
++++ b/app.py
+@@ -10,2 +10,2 @@
+ def missing():
+-    return 'bad'
++    return 'ok'
+"""
+    task_resp = client.post(
+        "/api/code-change/projects/demo/tasks",
+        json={"requirement": "apply impossible patch", "patch_text": bad_patch},
+    )
+    assert task_resp.status_code == 200
+    task_id = task_resp.json()["task_id"]
+
+    failed_resp = client.post("/api/code-change/worker/run-once")
+    assert failed_resp.status_code == 200
+    assert failed_resp.json()["status"] == "FAILED"
+
+    retry_resp = client.post(f"/api/code-change/projects/demo/tasks/{task_id}/retry")
+    assert retry_resp.status_code == 200
+    assert retry_resp.json()["status"] == "QUEUED"
+
+    metrics_resp = client.get("/api/code-change/metrics?project_id=demo")
+    assert metrics_resp.status_code == 200
+    assert metrics_resp.json()["queue_depth"] == 1

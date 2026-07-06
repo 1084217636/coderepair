@@ -284,3 +284,65 @@ V4 当前边界：
 ```text
 单机 JSONL 队列，不支持多 worker 分布式抢占；后续需要 Redis/PostgreSQL 队列、租约、重试和 sandbox。
 ```
+
+## V5 Worker 指标与失败重试
+
+本版新增：
+
+```text
+Task.attempt_count / max_attempts / last_error
+Task.queued_at / started_at / finished_at
+retry_task
+CLI: task retry
+CLI: worker metrics
+API: /api/code-change/metrics
+API: /api/code-change/projects/{project_id}/tasks/{task_id}/retry
+```
+
+验证命令：
+
+```bash
+python3 -m compileall -q backend/app/gateway/routers backend/app/gateway/app.py backend/packages/harness/deerflow/code_change backend/tests/code_change
+PYTHONPATH=backend:backend/packages/harness /tmp/deerflow-v3-test-venv/bin/python -m pytest backend/tests/code_change
+```
+
+实际结果：
+
+```text
+compileall：通过。
+collected 14 items
+14 passed in 0.56s
+```
+
+CLI metrics smoke：
+
+```bash
+PYTHONPATH=backend/packages/harness /tmp/deerflow-v3-test-venv/bin/python -m deerflow.code_change.cli --home /tmp/deerflow-v5-empty-state worker metrics
+```
+
+输出摘要：
+
+```text
+total_tasks = 0
+queue_depth = 0
+failed_count = 0
+retryable_failed_count = 0
+attempts_total = 0
+```
+
+预期测试覆盖：
+
+```text
+1. 成功任务 attempt_count = 1，并写 started_at / finished_at。
+2. 失败 patch 进入 FAILED，并记录 last_error。
+3. retry 后任务重新进入 QUEUED。
+4. 第二次失败后 exhausted_failed_count = 1。
+5. Router 支持 metrics 和 retry endpoint。
+```
+
+当前边界：
+
+```text
+V5 只做显式手动 retry 和本地 metrics，不做自动退避、worker lease、DLQ 和 sandbox。
+这些能力留到下一版，避免一次性把 MVP 写成不可维护的大改。
+```
