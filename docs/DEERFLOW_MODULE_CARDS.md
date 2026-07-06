@@ -356,7 +356,55 @@ attempts_total
 能说明平台不只是“让 Agent 跑一下”，而是把任务状态、失败率和队列积压作为研发效能系统的一部分来观察。
 ```
 
-## 12. V3 API 当前边界
+## 12. Workspace Sandbox
+
+位置：
+
+```text
+backend/packages/harness/deerflow/code_change/workspace.py
+backend/packages/harness/deerflow/code_change/worker.py
+```
+
+职责：
+
+```text
+为每个任务创建 artifacts/workspace 本地隔离工作区，让 patch/test 不直接污染项目主仓库。
+```
+
+关键结构：
+
+```text
+Workspace
+prepare_workspace
+Task.source_repo_path
+Task.workspace_path
+Task.sandbox_kind
+```
+
+执行链路：
+
+```text
+scan original repo
+  -> retrieve context from original repo
+  -> copy repo to workspace
+  -> apply patch in workspace
+  -> run tests in workspace
+  -> report workspace evidence
+```
+
+当前边界：
+
+```text
+local-copy 是文件系统隔离，不是容器隔离。它能防止主仓库被 patch 污染，但不能限制 CPU、内存、网络和系统调用。
+```
+
+面试价值：
+
+```text
+能回答“AI 改错代码怎么办”：不让 Agent 直接改主分支或主仓库，而是在可丢弃 workspace 中改，测试通过后再进入 PR/人工审核。
+```
+
+## 13. V3 API 当前边界
 
 ```text
 V3 仍同步执行任务，适合演示和本地平台闭环；生产化需要任务队列和 worker。

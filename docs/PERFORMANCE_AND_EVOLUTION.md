@@ -185,3 +185,46 @@ GET  /api/code-change/metrics?project_id=<project_id>
 3. 将 task.json 和 queue_log 迁移到 PostgreSQL 或 Redis Stream。
 4. metrics 对接 Prometheus，把任务失败率、测试耗时和重试次数可视化。
 ```
+
+## V6：隔离 workspace 执行 patch/test
+
+当前能力：
+
+```text
+读取原始 repo 做 scan / context retrieve
+  ↓
+复制 repo 到 task artifacts/workspace
+  ↓
+在 workspace 中 apply patch
+  ↓
+在 workspace 中运行 test_command
+  ↓
+task.json / audit.json 记录 source_repo_path、workspace_path、sandbox_kind
+```
+
+相比 V5 的改进：
+
+```text
+1. patch 不再直接应用到用户主仓库。
+2. test_command 在 task workspace 中执行，失败日志和 workspace 路径一起留痕。
+3. 原始仓库保持干净，便于人工 review、回滚和重复执行。
+4. 测试覆盖 workspace copy、patch/test 成功、API 返回 workspace_path 和原仓库未被污染。
+```
+
+当前边界：
+
+```text
+1. local-copy sandbox 只做文件系统隔离，不限制 CPU、内存、网络和系统调用。
+2. 大仓库复制成本高，后续需要 sparse checkout、git worktree 或缓存 workspace。
+3. test_command 仍然 shell=True，生产化需要命令白名单和参数化执行。
+4. workspace 暂不自动清理，因为它也是审计证据和复盘材料。
+```
+
+下一步优化：
+
+```text
+1. 接 Docker 或 DeerFlow sandbox，把 workspace 挂载进容器。
+2. 对测试命令增加超时、CPU/内存限制、网络开关和日志截断。
+3. 增加 workspace manifest，记录复制文件数、大小、忽略目录和执行耗时。
+4. 接 GitHub API，把通过测试的 diff 创建成 draft PR。
+```

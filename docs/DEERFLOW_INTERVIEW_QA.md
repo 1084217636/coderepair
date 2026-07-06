@@ -288,3 +288,38 @@ GET /api/code-change/metrics?project_id=demo
 ```
 
 下一步应升级成 Redis Stream / PostgreSQL 队列 + sandbox worker，这样更接近公司内部平台。
+
+## 16. V6 为什么要做 workspace sandbox？
+
+因为不能让 AI 直接在主仓库里改代码。V6 的执行方式是：
+
+```text
+原仓库只用于 scan / retrieve context
+  ↓
+复制一份 artifacts/workspace
+  ↓
+在 workspace apply patch
+  ↓
+在 workspace run tests
+  ↓
+报告里记录 source_repo_path / workspace_path / sandbox_kind
+```
+
+这样即使 patch 失败或测试失败，也不会污染主仓库。它和公司里的临时分支、CI workspace、容器执行是同一类思路。
+
+## 17. V6 的 sandbox 完全安全吗？
+
+还不是。V6 是 `local-copy`，解决的是“不要污染主仓库”，不是完整安全隔离。
+
+仍然缺：
+
+```text
+CPU/内存限制
+网络访问限制
+系统调用限制
+命令白名单
+日志截断
+workspace 清理策略
+```
+
+所以面试时不要夸大。正确说法是：我先把 patch/test 从主仓库移到隔离 workspace，下一步会接 Docker 或 DeerFlow sandbox。

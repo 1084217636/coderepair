@@ -346,3 +346,48 @@ attempts_total = 0
 V5 只做显式手动 retry 和本地 metrics，不做自动退避、worker lease、DLQ 和 sandbox。
 这些能力留到下一版，避免一次性把 MVP 写成不可维护的大改。
 ```
+
+## V6 隔离 workspace 执行验证
+
+本版新增：
+
+```text
+backend/packages/harness/deerflow/code_change/workspace.py
+Task.source_repo_path
+Task.workspace_path
+Task.sandbox_kind
+worker 在 workspace 中 apply patch / run tests
+task_report.md 输出 sandbox/source/workspace
+```
+
+验证命令：
+
+```bash
+python3 -m compileall -q backend/app/gateway/routers backend/app/gateway/app.py backend/packages/harness/deerflow/code_change backend/tests/code_change
+PYTHONPATH=backend:backend/packages/harness /tmp/deerflow-v3-test-venv/bin/python -m pytest backend/tests/code_change
+```
+
+实际结果：
+
+```text
+compileall：通过。
+collected 15 items
+15 passed in 0.58s
+```
+
+测试覆盖：
+
+```text
+1. prepare_workspace 复制 repo，并忽略 .git。
+2. patch 应用到 artifacts/workspace，不污染原仓库。
+3. test_command 在 workspace 中运行。
+4. API 返回 sandbox_kind=local-copy 和 workspace_path。
+5. task_report/audit 留存 workspace 证据。
+```
+
+当前边界：
+
+```text
+local-copy 只能解决“不污染主仓库”，还不能解决 CPU/内存/网络隔离。
+下一版应接 Docker 或 DeerFlow sandbox。
+```

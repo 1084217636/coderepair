@@ -4,12 +4,13 @@ from pathlib import Path
 
 from deerflow.code_change.context_retriever import retrieve_context
 from deerflow.code_change.models import Task, TaskStatus
-from deerflow.code_change.patcher import apply_patch_file, apply_patch_text, write_pr_body
+from deerflow.code_change.patcher import apply_patch_text, write_pr_body
 from deerflow.code_change.repo_scanner import scan_repo
 from deerflow.code_change.report_writer import write_reports
 from deerflow.code_change.state_machine import transition
 from deerflow.code_change.store import CodeChangeStore, now_iso
 from deerflow.code_change.test_runner import run_tests
+from deerflow.code_change.workspace import prepare_workspace
 
 
 REQUESTED_PATCH_NAME = "requested_patch.diff"
@@ -60,10 +61,14 @@ def execute_task(store: CodeChangeStore, task: Task) -> Task:
         files = scan_repo(project.repo_path)
         transition(task, TaskStatus.RETRIEVING_CONTEXT, f"Scanned {len(files)} source files.")
         task.contexts = retrieve_context(project.repo_path, task.requirement, files)
+        workspace = prepare_workspace(project.repo_path, task_dir)
+        task.source_repo_path = workspace.source_repo_path
+        task.workspace_path = workspace.workspace_path
+        task.sandbox_kind = workspace.sandbox_kind
         if requested_patch.exists():
             transition(task, TaskStatus.GENERATING_PATCH, f"Retrieved {len(task.contexts)} context items; using patch artifact.")
-            transition(task, TaskStatus.APPLYING_PATCH, f"Applying patch from {requested_patch}.")
-            task.patch_result = apply_patch_text(project.repo_path, requested_patch.read_text(encoding="utf-8"), task_dir)
+            transition(task, TaskStatus.APPLYING_PATCH, f"Applying patch from {requested_patch} in {workspace.sandbox_kind} workspace.")
+            task.patch_result = apply_patch_text(workspace.workspace_path, requested_patch.read_text(encoding="utf-8"), task_dir)
             if not task.patch_result.applied:
                 transition(task, TaskStatus.FAILED, "Patch failed to apply.", error=task.patch_result.error)
                 task.finished_at = now_iso()
@@ -71,7 +76,7 @@ def execute_task(store: CodeChangeStore, task: Task) -> Task:
                 store.save_task(task)
                 return task
         transition(task, TaskStatus.RUNNING_TESTS, f"Retrieved {len(task.contexts)} context items.")
-        task.test_result = run_tests(project.repo_path, project.test_command, task_dir)
+        task.test_result = run_tests(workspace.workspace_path, project.test_command, task_dir)
         if task.test_result.passed:
             transition(task, TaskStatus.REVIEWING, "Tests passed; report is ready for human review.")
             if task.patch_result:

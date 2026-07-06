@@ -1,5 +1,6 @@
 import sys
 import subprocess
+from pathlib import Path
 
 from deerflow.code_change.cli import run_task
 from deerflow.code_change.models import TaskStatus
@@ -47,8 +48,12 @@ def test_task_runner_applies_patch_and_writes_pr_body(tmp_path):
 
     artifact_dir = tmp_path / "state" / "projects" / "demo" / "tasks" / task.task_id
     assert task.status == TaskStatus.PR_CREATED
+    assert task.sandbox_kind == "local-copy"
+    assert task.workspace_path
     assert task.patch_result is not None
     assert task.patch_result.applied is True
+    assert (repo / "app.py").read_text(encoding="utf-8") == "def health():\n    return 'bad'\n"
+    assert "return 'ok'" in (Path(task.workspace_path) / "app.py").read_text(encoding="utf-8")
     assert (artifact_dir / "patch.diff").exists()
     assert (artifact_dir / "pr_body.md").exists()
     assert "Result: `PASS`" in (artifact_dir / "pr_body.md").read_text(encoding="utf-8")

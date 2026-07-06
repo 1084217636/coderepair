@@ -118,6 +118,9 @@ class Task:
     test_result: TestResult | None = None
     pr_body_path: str = ""
     artifact_dir: str = ""
+    source_repo_path: str = ""
+    workspace_path: str = ""
+    sandbox_kind: str = ""
     created_at: str = ""
     updated_at: str = ""
     error: str = ""

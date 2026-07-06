@@ -303,7 +303,33 @@ V5 当前边界：
 3. 失败后保留 repo diff、test.log、last_error，供二次修复 Agent 使用。
 ```
 
-### V7：回推 IM 群聊
+V6 已落地：
+
+```text
+1. 新增 workspace.py，创建 artifacts/workspace 本地隔离工作区。
+2. Worker 在原仓库做 scan/context retrieve，但在 workspace 中 apply patch 和 run tests。
+3. Task 新增 source_repo_path / workspace_path / sandbox_kind。
+4. task_report.md 和 audit.json 输出 workspace 证据。
+5. 测试验证原仓库不被 patch 污染，workspace 中变更和测试通过。
+```
+
+V6 当前边界：
+
+```text
+1. local-copy 不是容器级 sandbox，不能限制资源和网络。
+2. 大仓库复制成本较高。
+3. test_command 仍需白名单和参数化改造。
+```
+
+下一步 V7：
+
+```text
+1. 接 Docker/DeerFlow sandbox，限制 CPU、内存、网络和文件系统。
+2. 增加 workspace manifest 和日志截断。
+3. 对通过测试的 patch 生成 GitHub draft PR。
+```
+
+### V8：回推 IM 群聊
 
 目标：
 
@@ -345,10 +371,10 @@ docs/DEERFLOW_INTERVIEW_QA.md
 
 ## 4. 下一步立刻执行
 
-当前项目二已经完成 V0、V1、V2、V3、V4。下一步建议进入 V5：
+当前项目二已经完成 V0、V1、V2、V3、V4、V5、V6。下一步建议进入 V7：
 
 ```text
-1. 接 sandbox。
-2. 增加失败任务二次修复。
-3. 为任务状态和耗时补指标。
+1. 把 local-copy workspace 升级成 Docker/DeerFlow sandbox。
+2. 接 GitHub draft PR。
+3. 为 sandbox 和 PR 生成更多审计证据。
 ```

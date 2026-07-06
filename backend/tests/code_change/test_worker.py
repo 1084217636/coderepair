@@ -1,5 +1,6 @@
 import subprocess
 import sys
+from pathlib import Path
 
 from deerflow.code_change.models import TaskStatus
 from deerflow.code_change.store import CodeChangeStore
@@ -37,8 +38,12 @@ def test_worker_runs_queued_patch_task(tmp_path):
     assert finished.attempt_count == 1
     assert finished.started_at
     assert finished.finished_at
+    assert finished.sandbox_kind == "local-copy"
+    assert finished.workspace_path
     assert finished.patch_result is not None
     assert finished.patch_result.changed_files == ["app.py"]
+    assert (repo / "app.py").read_text(encoding="utf-8") == "def health():\n    return 'bad'\n"
+    assert "return 'ok'" in (Path(finished.workspace_path) / "app.py").read_text(encoding="utf-8")
     assert (tmp_path / "state" / "projects" / "demo" / "tasks" / queued.task_id / "pr_body.md").exists()
 
     metrics = store.task_metrics("demo")
