@@ -177,3 +177,65 @@ PYTHONPATH=backend/packages/harness python3 -m pytest backend/tests/code_change
 ```text
 当前系统 Python 缺少 pytest。
 ```
+
+## 7. V3 FastAPI Router 验证
+
+日期：2026-07-06
+
+新增内容：
+
+```text
+backend/app/gateway/routers/code_change.py
+backend/tests/code_change/test_code_change_router.py
+/api/code-change/projects
+/api/code-change/projects/{project_id}/tasks
+/api/code-change/projects/{project_id}/timeline
+/api/code-change/projects/{project_id}/tasks/{task_id}/report
+/api/code-change/projects/{project_id}/tasks/{task_id}/pr-body
+```
+
+语法验证：
+
+```bash
+python3 -m compileall -q backend/app/gateway/routers backend/app/gateway/app.py backend/packages/harness/deerflow/code_change backend/tests/code_change
+```
+
+结果：
+
+```text
+通过。
+```
+
+临时 venv 依赖：
+
+```bash
+python3 -m venv /tmp/deerflow-v3-test-venv
+/tmp/deerflow-v3-test-venv/bin/pip install -q fastapi pytest httpx2
+```
+
+API smoke 结果：
+
+```text
+create_status= 200
+task_status= 200 PR_CREATED
+report_status= 200
+pr_status= 200
+timeline_events= 2
+```
+
+pytest 结果：
+
+```bash
+PYTHONPATH=backend:backend/packages/harness /tmp/deerflow-v3-test-venv/bin/python -m pytest backend/tests/code_change
+```
+
+```text
+collected 9 items
+9 passed in 0.30s
+```
+
+V3 当前边界：
+
+```text
+API 同步执行 patch/test/report，适合本地演示；生产化需要队列、worker、sandbox 和任务状态轮询。
+```

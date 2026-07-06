@@ -5,7 +5,7 @@ from pathlib import Path
 
 from deerflow.code_change.context_retriever import retrieve_context
 from deerflow.code_change.models import Task, TaskStatus
-from deerflow.code_change.patcher import apply_patch_file, write_pr_body
+from deerflow.code_change.patcher import apply_patch_file, apply_patch_text, write_pr_body
 from deerflow.code_change.repo_scanner import scan_repo
 from deerflow.code_change.report_writer import write_reports
 from deerflow.code_change.state_machine import transition
@@ -61,7 +61,7 @@ def main() -> None:
         return
 
 
-def run_task(store: CodeChangeStore, project_name: str, requirement: str, patch_file: str = "") -> Task:
+def run_task(store: CodeChangeStore, project_name: str, requirement: str, patch_file: str = "", patch_text: str = "") -> Task:
     project = store.get_project(project_name)
     task_dir = store.new_task_dir(project.project_id)
     task = Task(
@@ -77,10 +77,14 @@ def run_task(store: CodeChangeStore, project_name: str, requirement: str, patch_
         files = scan_repo(project.repo_path)
         transition(task, TaskStatus.RETRIEVING_CONTEXT, f"Scanned {len(files)} source files.")
         task.contexts = retrieve_context(project.repo_path, requirement, files)
-        if patch_file:
+        if patch_file or patch_text:
             transition(task, TaskStatus.GENERATING_PATCH, f"Retrieved {len(task.contexts)} context items; using patch artifact.")
-            transition(task, TaskStatus.APPLYING_PATCH, f"Applying patch from {patch_file}.")
-            task.patch_result = apply_patch_file(project.repo_path, patch_file, task_dir)
+            patch_source = patch_file or "request patch_text"
+            transition(task, TaskStatus.APPLYING_PATCH, f"Applying patch from {patch_source}.")
+            if patch_file:
+                task.patch_result = apply_patch_file(project.repo_path, patch_file, task_dir)
+            else:
+                task.patch_result = apply_patch_text(project.repo_path, patch_text, task_dir)
             if not task.patch_result.applied:
                 transition(task, TaskStatus.FAILED, "Patch failed to apply.", error=task.patch_result.error)
                 write_reports(task)

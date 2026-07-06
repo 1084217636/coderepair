@@ -242,15 +242,31 @@ V2 不做：
 不改 DeerFlow 主 agent 链路
 ```
 
-下一步 V3：
+V3 已落地：
 
 ```text
-1. 接 FastAPI router，暴露 project/task/timeline/report 接口。
-2. 把 patch 执行放到 DeerFlow sandbox 或 Docker workspace。
-3. 增加失败任务二次修复入口。
+1. 接 FastAPI router，暴露 project/task/timeline/report/pr-body 接口。
+2. API 支持 patch_text 触发 patch/test/pr draft 闭环。
+3. 增加 router 级测试。
 ```
 
-### V4：回推 IM 群聊
+V3 当前边界：
+
+```text
+1. API 同步执行任务，长测试会占用请求线程。
+2. 仍使用 JSON 文件存储，不适合高并发写入。
+3. timeline 仍是全量读取，后续需要分页。
+```
+
+下一步 V4：
+
+```text
+1. 把 patch 执行放到 DeerFlow sandbox 或 Docker workspace。
+2. 增加失败任务二次修复入口。
+3. 引入任务队列，把 API 和 Worker 解耦。
+```
+
+### V5：回推 IM 群聊
 
 目标：
 
@@ -264,7 +280,7 @@ V2 不做：
 任务完成 -> 调用 IM Bot webhook -> 群里发送任务摘要、测试结果、风险点
 ```
 
-V4 不作为第一阶段必做。
+V5 不作为第一阶段必做。
 
 ## 3. 每次 AI 帮你改完必须补的内容
 
@@ -292,10 +308,10 @@ docs/DEERFLOW_INTERVIEW_QA.md
 
 ## 4. 下一步立刻执行
 
-当前项目二已经完成 V0、V1、V2。下一步建议进入 V3：
+当前项目二已经完成 V0、V1、V2、V3。下一步建议进入 V4：
 
 ```text
-1. 接 FastAPI router。
-2. 加任务详情和报告读取接口。
-3. 准备 Web/接口演示。
+1. 接 sandbox/worker。
+2. 增加失败任务二次修复。
+3. 为任务状态和耗时补指标。
 ```

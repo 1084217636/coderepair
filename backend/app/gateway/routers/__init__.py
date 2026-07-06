@@ -1,3 +1,26 @@
-from . import artifacts, assistants_compat, mcp, models, skills, suggestions, thread_runs, threads, uploads
+"""Gateway router package.
 
-__all__ = ["artifacts", "assistants_compat", "mcp", "models", "skills", "suggestions", "threads", "thread_runs", "uploads"]
+Keep this package lightweight: importing one router for tests should not eagerly
+import every router and its optional runtime dependencies.
+"""
+
+__all__ = [
+    "agents",
+    "artifacts",
+    "assistants_compat",
+    "auth",
+    "channel_connections",
+    "channels",
+    "code_change",
+    "features",
+    "feedback",
+    "mcp",
+    "memory",
+    "models",
+    "runs",
+    "skills",
+    "suggestions",
+    "thread_runs",
+    "threads",
+    "uploads",
+]

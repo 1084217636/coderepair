@@ -18,6 +18,7 @@ from app.gateway.routers import (
     auth,
     channel_connections,
     channels,
+    code_change,
     features,
     feedback,
     mcp,
@@ -339,6 +340,10 @@ This gateway provides runtime endpoints for agent runs plus custom endpoints for
                 "description": "Manage IM channel integrations (Feishu, Slack, Telegram)",
             },
             {
+                "name": "code-change",
+                "description": "Project-level code-change workflow extension APIs",
+            },
+            {
                 "name": "assistants-compat",
                 "description": "LangGraph Platform-compatible assistants API (stub)",
             },
@@ -416,6 +421,9 @@ This gateway provides runtime endpoints for agent runs plus custom endpoints for
 
     # Channels API is mounted at /api/channels
     app.include_router(channels.router)
+
+    # Code Change API is mounted at /api/code-change
+    app.include_router(code_change.router)
 
     # Assistants compatibility API (LangGraph Platform stub)
     app.include_router(assistants_compat.router)

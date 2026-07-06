@@ -123,7 +123,7 @@ backend/packages/harness/deerflow/code_change/test_runner.py
 subprocess.run(shell=True, cwd=repo_path)
 ```
 
-V2/V3 再接 DeerFlow sandbox。
+V4 再接 DeerFlow sandbox。
 
 ## 6. Report Writer
 
@@ -229,4 +229,50 @@ audit.json
 
 ```text
 这让项目从“只跑测试和写报告”升级成“代码变更、测试验证、PR 草稿”的研发效能闭环。
+```
+
+## 9. Code Change Router
+
+位置：
+
+```text
+backend/app/gateway/routers/code_change.py
+backend/app/gateway/app.py
+```
+
+职责：
+
+```text
+把 project/task/report/timeline 能力暴露成 FastAPI 接口，使项目从 CLI 工具升级为研发效能平台 API。
+```
+
+核心接口：
+
+```text
+POST /api/code-change/projects
+GET  /api/code-change/projects
+GET  /api/code-change/projects/{project_id}
+GET  /api/code-change/projects/{project_id}/timeline
+POST /api/code-change/projects/{project_id}/tasks
+GET  /api/code-change/projects/{project_id}/tasks/{task_id}
+GET  /api/code-change/projects/{project_id}/tasks/{task_id}/report
+GET  /api/code-change/projects/{project_id}/tasks/{task_id}/pr-body
+```
+
+当前边界：
+
+```text
+V3 仍同步执行任务，适合演示和本地平台闭环；生产化需要任务队列和 worker。
+```
+
+性能瓶颈：
+
+```text
+patch/test 命令可能耗时较长，同步 HTTP 请求会占用请求线程。
+```
+
+优化方向：
+
+```text
+API 只创建任务，Redis/DB 队列交给 worker；前端轮询 task status 或走 SSE。
 ```

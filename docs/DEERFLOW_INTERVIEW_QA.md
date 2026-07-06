@@ -32,13 +32,12 @@
 backend/packages/harness/deerflow/code_change/
 ```
 
-它不侵入 DeerFlow 原主链路，先提供 CLI 闭环。后续再接：
+它不侵入 DeerFlow 原主链路，先提供 CLI 闭环，V3 已接入 Gateway API：
 
 ```text
 backend/app/gateway/routers/code_change.py
-DeerFlow sandbox
-DeerFlow memory
-DeerFlow tools
+/api/code-change/projects
+/api/code-change/projects/{project_id}/tasks
 ```
 
 ## 4. 为什么用 JSON 文件存储，不直接用数据库？
@@ -98,6 +97,7 @@ embedding
 project create
 task run
 project status
+FastAPI code-change router
 patch.diff
 pr_body.md
 task_report.md
@@ -120,11 +120,19 @@ timeline.jsonl
 5. task run 支持 --patch-file，完成 patch -> test -> PR draft 闭环。
 ```
 
-下一步做 V3：
+当前 V3 已完成：
 
 ```text
 1. 增加 FastAPI router。
-2. 把 test_runner 接入 DeerFlow sandbox。
+2. 暴露 project/task/timeline/report/pr-body API。
+3. 增加 router 级 TestClient 测试。
+```
+
+下一步做 V4：
+
+```text
+1. 把 test_runner 接入 DeerFlow sandbox。
+2. 将同步 API 执行改成 task queue + worker。
 3. 把项目历史接 DeerFlow memory。
 ```
 
@@ -163,3 +171,31 @@ PR 草稿
 ```
 
 重点不是模型会不会写代码，而是把代码变更纳入可追踪、可测试、可审核的流程。
+
+## 11. V3 API 为什么还不是最终生产形态？
+
+V3 的价值是把 CLI 闭环升级成平台 API，但它仍然是同步执行：
+
+```text
+POST /api/code-change/projects/{project_id}/tasks
+  ↓
+run_task
+  ↓
+scan / patch / test / report
+  ↓
+返回 task
+```
+
+这适合演示和本地 MVP，不适合长耗时生产任务。生产化应该改成：
+
+```text
+API 创建任务
+  ↓
+任务入队
+  ↓
+Worker 在 sandbox 执行
+  ↓
+API 查询任务状态 / timeline / report
+```
+
+这个演进逻辑很重要，能说明我知道当前版本的边界和下一步架构优化方向。
