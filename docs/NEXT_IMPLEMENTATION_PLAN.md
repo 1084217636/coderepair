@@ -258,15 +258,33 @@ V3 当前边界：
 3. timeline 仍是全量读取，后续需要分页。
 ```
 
-下一步 V4：
+V4 已落地：
+
+```text
+1. 引入 QUEUED 状态。
+2. 新增 task_queue.jsonl 单机队列。
+3. 新增 worker.py，支持 run_next_task。
+4. CLI 支持 task enqueue / worker run-once。
+5. API 默认创建 QUEUED 任务，新增 /api/code-change/worker/run-once。
+```
+
+V4 当前边界：
+
+```text
+1. JSONL 队列只适合单机 MVP。
+2. 暂无任务租约、重试次数、死信队列。
+3. patch/test 仍未进入 Docker 或 DeerFlow sandbox。
+```
+
+下一步 V5：
 
 ```text
 1. 把 patch 执行放到 DeerFlow sandbox 或 Docker workspace。
 2. 增加失败任务二次修复入口。
-3. 引入任务队列，把 API 和 Worker 解耦。
+3. 为任务状态和耗时补指标。
 ```
 
-### V5：回推 IM 群聊
+### V6：回推 IM 群聊
 
 目标：
 
@@ -280,7 +298,7 @@ V3 当前边界：
 任务完成 -> 调用 IM Bot webhook -> 群里发送任务摘要、测试结果、风险点
 ```
 
-V5 不作为第一阶段必做。
+V6 不作为第一阶段必做。
 
 ## 3. 每次 AI 帮你改完必须补的内容
 
@@ -308,10 +326,10 @@ docs/DEERFLOW_INTERVIEW_QA.md
 
 ## 4. 下一步立刻执行
 
-当前项目二已经完成 V0、V1、V2、V3。下一步建议进入 V4：
+当前项目二已经完成 V0、V1、V2、V3、V4。下一步建议进入 V5：
 
 ```text
-1. 接 sandbox/worker。
+1. 接 sandbox。
 2. 增加失败任务二次修复。
 3. 为任务状态和耗时补指标。
 ```

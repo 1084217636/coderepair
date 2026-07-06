@@ -85,3 +85,46 @@ backend/tests/code_change 9 passed。
 3. task 列表和 timeline 增加分页。
 4. 增加 Prometheus 指标：任务数、耗时、失败率、测试耗时。
 ```
+
+## V4：任务队列和 Worker
+
+当前能力：
+
+```text
+API 创建 QUEUED 任务
+  ↓
+task_queue.jsonl 记录待执行任务
+  ↓
+worker run-once 消费一个 QUEUED 任务
+  ↓
+执行 scan / patch / test / report
+  ↓
+任务状态更新为 PR_CREATED 或 FAILED
+```
+
+相比 V3 的改进：
+
+```text
+1. API 不必直接执行长耗时 patch/test。
+2. 任务状态可以停留在 QUEUED，便于前端轮询。
+3. Worker 逻辑可单独测试，后续能替换成真正的后台进程。
+```
+
+当前瓶颈：
+
+```text
+1. task_queue.jsonl 是单机 append-only 队列，不适合多 worker 并发抢任务。
+2. 当前没有任务租约，Worker 进程中途崩溃后无法自动恢复 RUNNING 中任务。
+3. 当前没有重试次数、退避策略和死信队列。
+4. patch/test 仍未进入 Docker 或 DeerFlow sandbox。
+```
+
+优化方向：
+
+```text
+1. 队列迁移到 Redis Stream、PostgreSQL row lock 或 DeerFlow persistence。
+2. 增加 lease_until / attempt_count / last_error。
+3. 增加 worker 心跳和超时回收。
+4. 执行层接 Docker/DeerFlow sandbox，限制 CPU、内存、网络和文件系统范围。
+5. 增加任务指标：queued_count、running_count、duration、failure_rate。
+```

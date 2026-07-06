@@ -239,3 +239,48 @@ V3 当前边界：
 ```text
 API 同步执行 patch/test/report，适合本地演示；生产化需要队列、worker、sandbox 和任务状态轮询。
 ```
+
+## 8. V4 Queue / Worker 验证
+
+日期：2026-07-06
+
+新增内容：
+
+```text
+TaskStatus.QUEUED
+backend/packages/harness/deerflow/code_change/worker.py
+task_queue.jsonl
+CLI: task enqueue
+CLI: worker run-once
+API: /api/code-change/worker/run-once
+```
+
+验证命令：
+
+```bash
+python3 -m compileall -q backend/app/gateway/routers backend/app/gateway/app.py backend/packages/harness/deerflow/code_change backend/tests/code_change
+PYTHONPATH=backend:backend/packages/harness /tmp/deerflow-v3-test-venv/bin/python -m pytest backend/tests/code_change
+```
+
+实际结果：
+
+```text
+collected 11 items
+11 passed in 0.38s
+```
+
+CLI queue/worker smoke：
+
+```text
+task=<task_id> status=QUEUED
+task=<task_id> status=PR_CREATED
+queue_exists=True
+pr_body_exists=True
+test_log=tests ok
+```
+
+V4 当前边界：
+
+```text
+单机 JSONL 队列，不支持多 worker 分布式抢占；后续需要 Redis/PostgreSQL 队列、租约、重试和 sandbox。
+```

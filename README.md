@@ -2,7 +2,7 @@
 
 > Local fork goal: this repository is used as the base of `agent-code-change-platform`, an autumn-recruitment AI engineering project focused on project-based code change workflow, sandbox testing, diff explanation, and PR draft generation. The local MVP plan is documented in [docs/CODE_CHANGE_MVP_PLAN.md](docs/CODE_CHANGE_MVP_PLAN.md).
 >
-> Local V3 extension: `backend/packages/harness/deerflow/code_change/` and `backend/app/gateway/routers/code_change.py` add a project-based code-change workflow with CLI + FastAPI APIs for project storage, repository scanning, context retrieval, safe unified-diff patch application, test execution, PR draft generation, timeline, report, and audit artifacts. See [docs/DEERFLOW_CODE_MAP.md](docs/DEERFLOW_CODE_MAP.md), [docs/DEERFLOW_TEST_EVIDENCE.md](docs/DEERFLOW_TEST_EVIDENCE.md), and [docs/VERSION_TASK_TRACKER.csv](docs/VERSION_TASK_TRACKER.csv).
+> Local V4 extension: `backend/packages/harness/deerflow/code_change/` and `backend/app/gateway/routers/code_change.py` add a project-based code-change workflow with CLI + FastAPI APIs, task queue, worker execution, repository scanning, context retrieval, safe unified-diff patch application, test execution, PR draft generation, timeline, report, and audit artifacts. See [docs/DEERFLOW_CODE_MAP.md](docs/DEERFLOW_CODE_MAP.md), [docs/DEERFLOW_TEST_EVIDENCE.md](docs/DEERFLOW_TEST_EVIDENCE.md), and [docs/VERSION_TASK_TRACKER.csv](docs/VERSION_TASK_TRACKER.csv).
 
 English | [中文](./README_zh.md) | [日本語](./README_ja.md) | [Français](./README_fr.md) | [Русский](./README_ru.md)
 

@@ -8,6 +8,7 @@ from typing import Any
 
 class TaskStatus(StrEnum):
     CREATED = "CREATED"
+    QUEUED = "QUEUED"
     PLANNING = "PLANNING"
     RETRIEVING_CONTEXT = "RETRIEVING_CONTEXT"
     GENERATING_PATCH = "GENERATING_PATCH"

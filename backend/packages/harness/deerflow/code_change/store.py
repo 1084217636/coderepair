@@ -20,6 +20,7 @@ class CodeChangeStore:
         self.base_dir = Path(base_dir)
         self.projects_dir = self.base_dir / "projects"
         self.projects_index = self.base_dir / "projects.json"
+        self.queue_log = self.base_dir / "task_queue.jsonl"
         self.projects_dir.mkdir(parents=True, exist_ok=True)
 
     def create_project(self, name: str, repo_path: str, test_command: str, repo_url: str = "", default_branch: str = "main") -> Project:
@@ -59,11 +60,29 @@ class CodeChangeStore:
         self._write_json(task_path, task.to_dict())
         self.append_timeline(task.project_id, "TASK_UPDATED", f"{task.task_id} status={task.status}")
 
+    def get_task(self, project_id: str, task_id: str) -> Task:
+        task_path = self.project_dir(project_id) / "tasks" / task_id / "task.json"
+        if not task_path.exists():
+            raise KeyError(f"task not found: {task_id}")
+        return Task.from_dict(self._read_json(task_path))
+
     def new_task_dir(self, project_id: str) -> Path:
         task_id = "task_" + datetime.now(UTC).strftime("%Y%m%d_%H%M%S_") + uuid4().hex[:8]
         path = self.project_dir(project_id) / "tasks" / task_id
         path.mkdir(parents=True, exist_ok=False)
         return path
+
+    def enqueue_task(self, task: Task) -> None:
+        item = {"time": now_iso(), "project_id": task.project_id, "task_id": task.task_id}
+        self.queue_log.parent.mkdir(parents=True, exist_ok=True)
+        with self.queue_log.open("a", encoding="utf-8") as fh:
+            fh.write(json.dumps(item, ensure_ascii=False) + "\n")
+        self.append_timeline(task.project_id, "TASK_ENQUEUED", task.task_id)
+
+    def queued_items(self) -> list[dict]:
+        if not self.queue_log.exists():
+            return []
+        return [json.loads(line) for line in self.queue_log.read_text(encoding="utf-8").splitlines() if line.strip()]
 
     def project_dir(self, project_id: str) -> Path:
         return self.projects_dir / project_safe_name(project_id)

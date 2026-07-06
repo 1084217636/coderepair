@@ -5,7 +5,8 @@ from deerflow.code_change.store import now_iso
 
 
 ALLOWED_TRANSITIONS: dict[TaskStatus, set[TaskStatus]] = {
-    TaskStatus.CREATED: {TaskStatus.PLANNING, TaskStatus.FAILED},
+    TaskStatus.CREATED: {TaskStatus.QUEUED, TaskStatus.PLANNING, TaskStatus.FAILED},
+    TaskStatus.QUEUED: {TaskStatus.PLANNING, TaskStatus.FAILED},
     TaskStatus.PLANNING: {TaskStatus.RETRIEVING_CONTEXT, TaskStatus.FAILED},
     TaskStatus.RETRIEVING_CONTEXT: {TaskStatus.GENERATING_PATCH, TaskStatus.RUNNING_TESTS, TaskStatus.FAILED},
     TaskStatus.GENERATING_PATCH: {TaskStatus.APPLYING_PATCH, TaskStatus.FAILED},

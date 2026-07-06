@@ -50,6 +50,7 @@ backend/packages/harness/deerflow/code_change/state_machine.py
 
 ```text
 CREATED
+QUEUED
 PLANNING
 RETRIEVING_CONTEXT
 GENERATING_PATCH
@@ -123,7 +124,7 @@ backend/packages/harness/deerflow/code_change/test_runner.py
 subprocess.run(shell=True, cwd=repo_path)
 ```
 
-V4 再接 DeerFlow sandbox。
+V5 再接 DeerFlow sandbox。
 
 ## 6. Report Writer
 
@@ -174,6 +175,8 @@ project create
 project list
 project status
 task run
+task enqueue
+worker run-once
 ```
 
 面试价值：
@@ -257,6 +260,57 @@ POST /api/code-change/projects/{project_id}/tasks
 GET  /api/code-change/projects/{project_id}/tasks/{task_id}
 GET  /api/code-change/projects/{project_id}/tasks/{task_id}/report
 GET  /api/code-change/projects/{project_id}/tasks/{task_id}/pr-body
+POST /api/code-change/worker/run-once
+```
+
+当前边界：
+
+```text
+V4 默认创建 QUEUED 任务；worker/run-once 用于本地演示和测试。生产化应把 worker 独立成常驻进程。
+```
+
+## 10. Worker
+
+位置：
+
+```text
+backend/packages/harness/deerflow/code_change/worker.py
+```
+
+职责：
+
+```text
+把任务创建和任务执行拆开：API/CLI 可以只创建 QUEUED 任务，Worker 再消费队列并执行 patch/test/report。
+```
+
+关键函数：
+
+```text
+create_task
+execute_task
+run_task_now
+run_next_task
+```
+
+数据结构：
+
+```text
+task_queue.jsonl
+task.json
+requested_patch.diff
+timeline.jsonl
+```
+
+当前边界：
+
+```text
+V4 是单机 JSONL 队列，适合演示架构演进；多 worker 并发、租约、重试和死信队列留到后续生产化版本。
+```
+
+面试价值：
+
+```text
+能解释为什么 V3 同步 API 会阻塞，以及如何演进成公司里的 Task Service + Worker 模式。
 ```
 
 当前边界：

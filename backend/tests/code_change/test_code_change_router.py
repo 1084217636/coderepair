@@ -44,6 +44,11 @@ def test_code_change_router_runs_patch_task(tmp_path):
     )
     assert task_resp.status_code == 200
     task = task_resp.json()
+    assert task["status"] == "QUEUED"
+
+    worker_resp = client.post("/api/code-change/worker/run-once")
+    assert worker_resp.status_code == 200
+    task = worker_resp.json()
     assert task["status"] == "PR_CREATED"
     assert task["patch_result"]["changed_files"] == ["app.py"]
 

@@ -128,11 +128,20 @@ timeline.jsonl
 3. 增加 router 级 TestClient 测试。
 ```
 
-下一步做 V4：
+当前 V4 已完成：
+
+```text
+1. 将同步 API 执行改成 task queue + worker。
+2. 增加 QUEUED 状态和 task_queue.jsonl。
+3. CLI 支持 task enqueue / worker run-once。
+4. API 默认创建 QUEUED 任务，并提供 worker/run-once。
+```
+
+下一步做 V5：
 
 ```text
 1. 把 test_runner 接入 DeerFlow sandbox。
-2. 将同步 API 执行改成 task queue + worker。
+2. 增加任务租约、重试和死信队列。
 3. 把项目历史接 DeerFlow memory。
 ```
 
@@ -199,3 +208,34 @@ API 查询任务状态 / timeline / report
 ```
 
 这个演进逻辑很重要，能说明我知道当前版本的边界和下一步架构优化方向。
+
+## 12. V4 为什么要引入 Worker？
+
+V3 的 API 会在 HTTP 请求里同步执行 patch 和测试，测试一慢，请求就会被长时间占用。V4 把它拆成：
+
+```text
+POST /api/code-change/projects/{project_id}/tasks
+  ↓
+创建 QUEUED 任务
+  ↓
+写入 task_queue.jsonl
+  ↓
+Worker run-once 消费任务
+  ↓
+执行 patch/test/report
+```
+
+这样更像公司里的研发效能平台：API 负责接需求和查询状态，Worker 负责长耗时执行。
+
+## 13. V4 还有哪些生产化不足？
+
+当前 V4 是单机 MVP：
+
+```text
+1. task_queue.jsonl 不支持多 worker 分布式抢占。
+2. 没有 lease 和心跳，worker 崩溃后的任务恢复还没做。
+3. 没有 attempt_count、退避重试和 dead-letter。
+4. patch/test 仍未进入 Docker 或 DeerFlow sandbox。
+```
+
+下一步应升级成 Redis Stream / PostgreSQL 队列 + sandbox worker，这样更接近公司内部平台。

@@ -29,6 +29,8 @@ Project
   ↓
 Task
   ↓
+Queue / Worker
+  ↓
 Repo Scan
   ↓
 Context Retrieve
@@ -51,6 +53,7 @@ Timeline / Audit
 | `models.py` | Project、Task、TaskStatus、TaskStep、CodeFile、RetrievedContext、PatchResult、TestResult |
 | `store.py` | JSON 文件存储，保存 project、task、timeline |
 | `state_machine.py` | 任务状态机和阶段跳转校验 |
+| `worker.py` | 创建 QUEUED 任务、消费队列、执行 scan/patch/test/report |
 | `repo_scanner.py` | 扫描仓库文件，排除 `.git`、`.venv`、`node_modules` 等噪音 |
 | `context_retriever.py` | 基于需求关键词召回相关代码文件 |
 | `patcher.py` | 校验并应用 unified diff，生成 patch 日志和 PR 草稿 |
@@ -98,6 +101,18 @@ PR_CREATED / FAILED
 write_reports
   ↓
 task.json / task_report.md / test.log / audit.json
+
+python -m deerflow.code_change.cli task enqueue demo "需求"
+  ↓
+Task QUEUED
+  ↓
+task_queue.jsonl
+
+python -m deerflow.code_change.cli worker run-once
+  ↓
+run_next_task
+  ↓
+PR_CREATED / FAILED
 ```
 
 ## 5. 当前产物结构
@@ -105,6 +120,7 @@ task.json / task_report.md / test.log / audit.json
 ```text
 .deer-flow/code-change/
 ├── projects.json
+├── task_queue.jsonl
 └── projects/
     └── demo/
         ├── project.json
@@ -134,9 +150,10 @@ backend/app/gateway/routers/code_change.py
 /api/code-change/projects/{project_id}/tasks/{task_id}
 /api/code-change/projects/{project_id}/tasks/{task_id}/report
 /api/code-change/projects/{project_id}/tasks/{task_id}/pr-body
+/api/code-change/worker/run-once
 ```
 
-V4 再考虑：
+V5 再考虑：
 
 ```text
 DeerFlow sandbox

@@ -13,7 +13,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel, Field
 
-from deerflow.code_change.cli import run_task
+from deerflow.code_change.worker import create_task, run_next_task, run_task_now
 from deerflow.code_change.store import CodeChangeStore
 
 router = APIRouter(prefix="/api/code-change", tags=["code-change"])
@@ -34,6 +34,7 @@ class ProjectCreateRequest(BaseModel):
 class TaskRunRequest(BaseModel):
     requirement: str = Field(..., min_length=1)
     patch_text: str = Field(default="", description="Unified diff content to apply before running tests")
+    run_now: bool = Field(default=False, description="Run synchronously for local demos; default enqueues for worker execution")
 
 
 @router.post("/projects", summary="Create Code Change Project")
@@ -77,9 +78,20 @@ def get_project_timeline(project_id: str, store: CodeChangeStore = Depends(get_c
 @router.post("/projects/{project_id}/tasks", summary="Run Code Change Task")
 def run_project_task(project_id: str, request: TaskRunRequest, store: CodeChangeStore = Depends(get_code_change_store)) -> dict:
     try:
-        task = run_task(store, project_id, request.requirement, patch_text=request.patch_text)
+        if request.run_now:
+            task = run_task_now(store, project_id, request.requirement, patch_text=request.patch_text)
+        else:
+            task = create_task(store, project_id, request.requirement, patch_text=request.patch_text, enqueue=True)
     except KeyError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return task.to_dict()
+
+
+@router.post("/worker/run-once", summary="Run One Queued Code Change Task")
+def run_worker_once(store: CodeChangeStore = Depends(get_code_change_store)) -> dict:
+    task = run_next_task(store)
+    if task is None:
+        return {"status": "NOOP"}
     return task.to_dict()
 
 
