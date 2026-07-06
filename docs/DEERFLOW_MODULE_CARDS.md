@@ -52,17 +52,12 @@ backend/packages/harness/deerflow/code_change/state_machine.py
 CREATED
 PLANNING
 RETRIEVING_CONTEXT
-RUNNING_TESTS
-REVIEWING
-FAILED
-```
-
-V2 再补：
-
-```text
 GENERATING_PATCH
 APPLYING_PATCH
+RUNNING_TESTS
+REVIEWING
 PR_CREATED
+FAILED
 ROLLED_BACK
 ```
 
@@ -152,7 +147,9 @@ backend/packages/harness/deerflow/code_change/report_writer.py
 需求
 状态
 召回上下文
+Patch 结果
 测试结果
+PR 草稿路径
 错误信息
 ```
 
@@ -183,4 +180,53 @@ task run
 
 ```text
 这证明二开不是只改 README，而是已经有可运行的 project-based workflow。
+```
+
+## 8. Patcher
+
+位置：
+
+```text
+backend/packages/harness/deerflow/code_change/patcher.py
+```
+
+职责：
+
+```text
+应用统一 diff，生成 patch.diff、patch_check.log、patch_apply.log，并统计修改文件、增删行。
+```
+
+关键函数：
+
+```text
+apply_patch_file
+apply_patch_text
+extract_changed_files
+validate_patch_paths
+write_pr_body
+```
+
+安全边界：
+
+```text
+拒绝绝对路径
+拒绝包含 .. 的路径
+先执行 git apply --check
+check 通过后才执行 git apply
+```
+
+产物：
+
+```text
+patch.diff
+patch_check.log
+patch_apply.log
+pr_body.md
+audit.json
+```
+
+面试价值：
+
+```text
+这让项目从“只跑测试和写报告”升级成“代码变更、测试验证、PR 草稿”的研发效能闭环。
 ```

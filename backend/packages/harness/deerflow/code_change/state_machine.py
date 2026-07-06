@@ -7,10 +7,14 @@ from deerflow.code_change.store import now_iso
 ALLOWED_TRANSITIONS: dict[TaskStatus, set[TaskStatus]] = {
     TaskStatus.CREATED: {TaskStatus.PLANNING, TaskStatus.FAILED},
     TaskStatus.PLANNING: {TaskStatus.RETRIEVING_CONTEXT, TaskStatus.FAILED},
-    TaskStatus.RETRIEVING_CONTEXT: {TaskStatus.RUNNING_TESTS, TaskStatus.FAILED},
+    TaskStatus.RETRIEVING_CONTEXT: {TaskStatus.GENERATING_PATCH, TaskStatus.RUNNING_TESTS, TaskStatus.FAILED},
+    TaskStatus.GENERATING_PATCH: {TaskStatus.APPLYING_PATCH, TaskStatus.FAILED},
+    TaskStatus.APPLYING_PATCH: {TaskStatus.RUNNING_TESTS, TaskStatus.FAILED, TaskStatus.ROLLED_BACK},
     TaskStatus.RUNNING_TESTS: {TaskStatus.REVIEWING, TaskStatus.FAILED},
-    TaskStatus.REVIEWING: set(),
+    TaskStatus.REVIEWING: {TaskStatus.PR_CREATED, TaskStatus.FAILED},
+    TaskStatus.PR_CREATED: set(),
     TaskStatus.FAILED: set(),
+    TaskStatus.ROLLED_BACK: set(),
 }
 
 

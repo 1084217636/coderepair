@@ -186,14 +186,16 @@ python -m deerflow.code_change.cli project status demo
 在 V1 项目空间和报告闭环基础上，增加 patch / test / PR 草稿能力。
 ```
 
-V2 新增：
+当前 V2 已落地：
 
 ```text
 backend/packages/harness/deerflow/code_change/patcher.py
-backend/app/gateway/routers/code_change.py
-backend/app/gateway/routers/__init__.py
 backend/tests/code_change/test_patcher.py
-backend/tests/code_change/test_code_change_router.py
+task run --patch-file <unified-diff>
+patch.diff
+patch_check.log
+patch_apply.log
+pr_body.md
 ```
 
 任务状态机：
@@ -215,6 +217,8 @@ V2 产物增加：
 
 ```text
 patch.diff
+patch_check.log
+patch_apply.log
 pr_body.md
 ```
 
@@ -229,7 +233,24 @@ pr_body.md
 回滚建议
 ```
 
-### V3：回推 IM 群聊
+V2 不做：
+
+```text
+不直接创建真实 GitHub PR
+不把 patcher 接入真实大模型
+不接 FastAPI router
+不改 DeerFlow 主 agent 链路
+```
+
+下一步 V3：
+
+```text
+1. 接 FastAPI router，暴露 project/task/timeline/report 接口。
+2. 把 patch 执行放到 DeerFlow sandbox 或 Docker workspace。
+3. 增加失败任务二次修复入口。
+```
+
+### V4：回推 IM 群聊
 
 目标：
 
@@ -243,7 +264,7 @@ pr_body.md
 任务完成 -> 调用 IM Bot webhook -> 群里发送任务摘要、测试结果、风险点
 ```
 
-V3 不作为第一阶段必做。
+V4 不作为第一阶段必做。
 
 ## 3. 每次 AI 帮你改完必须补的内容
 
@@ -271,13 +292,10 @@ docs/DEERFLOW_INTERVIEW_QA.md
 
 ## 4. 下一步立刻执行
 
-下一步先做 V0，不写业务代码：
+当前项目二已经完成 V0、V1、V2。下一步建议进入 V3：
 
 ```text
-1. 补 docs/DEERFLOW_CODE_MAP.md。
-2. 补 docs/DEERFLOW_MODULE_CARDS.md。
-3. 补 docs/DEERFLOW_TEST_EVIDENCE.md。
-4. 补 docs/DEERFLOW_INTERVIEW_QA.md。
+1. 接 FastAPI router。
+2. 加任务详情和报告读取接口。
+3. 准备 Web/接口演示。
 ```
-
-V0 完成后，再进入 V1 的 `code_change` 独立包。

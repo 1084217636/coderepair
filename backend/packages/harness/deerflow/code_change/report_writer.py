@@ -30,6 +30,28 @@ def render_task_report(task: Task) -> str:
             lines.append(f"- `{ctx.path}` score={ctx.score} ({ctx.reason})")
     else:
         lines.append("- No context retrieved.")
+
+    lines.extend(["", "## Patch", ""])
+    if task.patch_result:
+        lines.extend(
+            [
+                f"- Applied: `{task.patch_result.applied}`",
+                f"- Patch: `{task.patch_result.patch_path}`",
+                f"- Additions: `{task.patch_result.lines_added}`",
+                f"- Deletions: `{task.patch_result.lines_deleted}`",
+                "- Changed files:",
+            ]
+        )
+        if task.patch_result.changed_files:
+            for item in task.patch_result.changed_files:
+                lines.append(f"  - `{item}`")
+        else:
+            lines.append("  - None")
+        if task.patch_result.error:
+            lines.append(f"- Patch error: {task.patch_result.error}")
+    else:
+        lines.append("- No patch applied.")
+
     lines.extend(["", "## Test Result", ""])
     if task.test_result:
         result = "PASS" if task.test_result.passed else "FAIL"
@@ -43,6 +65,8 @@ def render_task_report(task: Task) -> str:
         )
     else:
         lines.append("- Tests not run.")
+    if task.pr_body_path:
+        lines.extend(["", "## PR Draft", "", f"- PR body: `{task.pr_body_path}`"])
     if task.error:
         lines.extend(["", "## Error", "", task.error])
     lines.append("")

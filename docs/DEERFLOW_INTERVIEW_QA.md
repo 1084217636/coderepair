@@ -60,8 +60,11 @@ DeerFlow tools
 CREATED
 PLANNING
 RETRIEVING_CONTEXT
+GENERATING_PATCH
+APPLYING_PATCH
 RUNNING_TESTS
-REVIEWING / FAILED
+REVIEWING
+PR_CREATED / FAILED
 ```
 
 这样面试时可以讲清楚：Agent 不是黑盒输出，而是每一步都有状态、产物和失败记录。
@@ -95,6 +98,8 @@ embedding
 project create
 task run
 project status
+patch.diff
+pr_body.md
 task_report.md
 test.log
 audit.json
@@ -105,14 +110,22 @@ timeline.jsonl
 
 ## 8. 下一步怎么靠近最终简历项目？
 
-下一步做 V2：
+当前 V2 已完成：
 
 ```text
-1. 增加 patcher.py，支持 mock patch / unified diff。
-2. 增加 pr_body.md。
-3. 增加 FastAPI router。
-4. 把 test_runner 接入 DeerFlow sandbox。
-5. 把项目历史接 DeerFlow memory。
+1. 增加 patcher.py，支持 unified diff。
+2. 增加 patch 路径安全校验，防止写出仓库。
+3. 增加 patch.diff / patch_check.log / patch_apply.log。
+4. 增加 pr_body.md。
+5. task run 支持 --patch-file，完成 patch -> test -> PR draft 闭环。
+```
+
+下一步做 V3：
+
+```text
+1. 增加 FastAPI router。
+2. 把 test_runner 接入 DeerFlow sandbox。
+3. 把项目历史接 DeerFlow memory。
 ```
 
 最终简历叙事：
@@ -120,3 +133,33 @@ timeline.jsonl
 ```text
 基于 DeerFlow 二次开发项目级 AI 研发任务助手，支持项目空间、代码上下文召回、测试执行、任务报告、审计留痕，并逐步扩展到 Patch、PR 草稿和 IM 回推。
 ```
+
+## 9. 你怎么保证 Agent 不乱改文件？
+
+V2 先从 patch 安全边界做起：
+
+```text
+1. patch 必须是 unified diff。
+2. 解析 diff 里的 changed files。
+3. 拒绝绝对路径和包含 .. 的路径。
+4. 先 git apply --check，通过后才真正 apply。
+5. 所有 patch、日志、审计结果都保存到 task artifact 目录。
+```
+
+当前还没有宣称“完全安全”，因为真实生产还需要 Docker sandbox、权限隔离、资源限制和人工审核。这个口径比说“AI 自动改代码很安全”更工程化。
+
+## 10. 和 Cursor / Copilot 的区别是什么？
+
+Cursor / Copilot 更偏个人 IDE 辅助。我这个项目关注企业研发流程里的任务闭环：
+
+```text
+项目空间
+仓库上下文
+任务状态机
+Patch 应用
+测试验证
+PR 草稿
+审计记录
+```
+
+重点不是模型会不会写代码，而是把代码变更纳入可追踪、可测试、可审核的流程。

@@ -5,6 +5,7 @@ from pathlib import Path
 
 from deerflow.code_change.context_retriever import retrieve_context
 from deerflow.code_change.models import Task, TaskStatus
+from deerflow.code_change.patcher import apply_patch_file, write_pr_body
 from deerflow.code_change.repo_scanner import scan_repo
 from deerflow.code_change.report_writer import write_reports
 from deerflow.code_change.state_machine import transition
@@ -34,6 +35,7 @@ def main() -> None:
     run = task_sub.add_parser("run")
     run.add_argument("project")
     run.add_argument("requirement")
+    run.add_argument("--patch-file", default="", help="Unified diff to apply before running tests")
 
     args = parser.parse_args()
     store = CodeChangeStore(args.home)
@@ -55,11 +57,11 @@ def main() -> None:
         print(f"timeline={timeline}")
         return
     if args.resource == "task" and args.action == "run":
-        run_task(store, args.project, args.requirement)
+        run_task(store, args.project, args.requirement, patch_file=args.patch_file)
         return
 
 
-def run_task(store: CodeChangeStore, project_name: str, requirement: str) -> Task:
+def run_task(store: CodeChangeStore, project_name: str, requirement: str, patch_file: str = "") -> Task:
     project = store.get_project(project_name)
     task_dir = store.new_task_dir(project.project_id)
     task = Task(
@@ -75,10 +77,24 @@ def run_task(store: CodeChangeStore, project_name: str, requirement: str) -> Tas
         files = scan_repo(project.repo_path)
         transition(task, TaskStatus.RETRIEVING_CONTEXT, f"Scanned {len(files)} source files.")
         task.contexts = retrieve_context(project.repo_path, requirement, files)
+        if patch_file:
+            transition(task, TaskStatus.GENERATING_PATCH, f"Retrieved {len(task.contexts)} context items; using patch artifact.")
+            transition(task, TaskStatus.APPLYING_PATCH, f"Applying patch from {patch_file}.")
+            task.patch_result = apply_patch_file(project.repo_path, patch_file, task_dir)
+            if not task.patch_result.applied:
+                transition(task, TaskStatus.FAILED, "Patch failed to apply.", error=task.patch_result.error)
+                write_reports(task)
+                store.save_task(task)
+                print(f"task={task.task_id} status={task.status} artifacts={task.artifact_dir}")
+                return task
         transition(task, TaskStatus.RUNNING_TESTS, f"Retrieved {len(task.contexts)} context items.")
         task.test_result = run_tests(project.repo_path, project.test_command, task_dir)
         if task.test_result.passed:
             transition(task, TaskStatus.REVIEWING, "Tests passed; report is ready for human review.")
+            if task.patch_result:
+                pr_body = write_pr_body(task.task_id, task.requirement, task.patch_result, True, task_dir)
+                task.pr_body_path = str(pr_body)
+                transition(task, TaskStatus.PR_CREATED, "Generated PR draft with diff explanation and test result.")
         else:
             transition(task, TaskStatus.FAILED, "Tests failed; inspect test.log.", error="test command returned non-zero exit code")
     except Exception as exc:

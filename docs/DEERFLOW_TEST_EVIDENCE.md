@@ -8,7 +8,7 @@
 
 ```text
 当前环境没有 uv，也没有系统 pytest。
-因此本轮使用 compileall + CLI 闭环验证。
+因此本轮使用 compileall + CLI 闭环验证；pytest 测试文件已补充，安装依赖后可直接跑。
 ```
 
 ## 2. 语法验证
@@ -113,4 +113,67 @@ python3 -m pytest tests/code_change
 ```bash
 cd agent-code-change-platform/backend
 uv run pytest tests/code_change
+```
+
+## 6. V2 Patch / Test / PR Draft 闭环验证
+
+日期：2026-07-06
+
+命令摘要：
+
+```bash
+python3 -m compileall -q backend/packages/harness/deerflow/code_change backend/tests/code_change
+PYTHONPATH=backend/packages/harness python3 -m deerflow.code_change.cli --help
+```
+
+CLI 端到端：
+
+```bash
+tmp_repo=$(mktemp -d)
+tmp_home=$(mktemp -d)
+patch_file="$tmp_home/fix.patch"
+printf "def health():\n    return 'bad'\n" > "$tmp_repo/app.py"
+cd "$tmp_repo" && git init -q
+
+# fix.patch 将 app.health() 从 bad 改成 ok
+
+PYTHONPATH=backend/packages/harness python3 -m deerflow.code_change.cli --home "$tmp_home/state" \
+  project create demo \
+  --repo-path "$tmp_repo" \
+  --test-command "python3 -c \"import app; assert app.health() == 'ok'; print('tests ok')\""
+
+PYTHONPATH=backend/packages/harness python3 -m deerflow.code_change.cli --home "$tmp_home/state" \
+  task run demo "fix health function" --patch-file "$patch_file"
+```
+
+结果：
+
+```text
+task=<task_id> status=PR_CREATED
+test_log=tests ok
+```
+
+生成产物：
+
+```text
+patch.diff
+patch_check.log
+patch_apply.log
+pr_body.md
+task_report.md
+test.log
+audit.json
+timeline.jsonl
+```
+
+本轮未跑：
+
+```text
+PYTHONPATH=backend/packages/harness python3 -m pytest backend/tests/code_change
+```
+
+原因：
+
+```text
+当前系统 Python 缺少 pytest。
 ```

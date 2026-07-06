@@ -10,9 +10,13 @@ class TaskStatus(StrEnum):
     CREATED = "CREATED"
     PLANNING = "PLANNING"
     RETRIEVING_CONTEXT = "RETRIEVING_CONTEXT"
+    GENERATING_PATCH = "GENERATING_PATCH"
+    APPLYING_PATCH = "APPLYING_PATCH"
     RUNNING_TESTS = "RUNNING_TESTS"
     REVIEWING = "REVIEWING"
+    PR_CREATED = "PR_CREATED"
     FAILED = "FAILED"
+    ROLLED_BACK = "ROLLED_BACK"
 
 
 @dataclass(slots=True)
@@ -87,6 +91,21 @@ class TestResult:
 
 
 @dataclass(slots=True)
+class PatchResult:
+    patch_path: str
+    changed_files: list[str] = field(default_factory=list)
+    lines_added: int = 0
+    lines_deleted: int = 0
+    applied: bool = False
+    check_log_path: str = ""
+    apply_log_path: str = ""
+    error: str = ""
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass(slots=True)
 class Task:
     task_id: str
     project_id: str
@@ -94,7 +113,9 @@ class Task:
     status: TaskStatus = TaskStatus.CREATED
     steps: list[TaskStep] = field(default_factory=list)
     contexts: list[RetrievedContext] = field(default_factory=list)
+    patch_result: PatchResult | None = None
     test_result: TestResult | None = None
+    pr_body_path: str = ""
     artifact_dir: str = ""
     created_at: str = ""
     updated_at: str = ""
@@ -111,6 +132,8 @@ class Task:
         data["status"] = TaskStatus(data["status"])
         data["steps"] = [TaskStep(**item) for item in data.get("steps", [])]
         data["contexts"] = [RetrievedContext(**item) for item in data.get("contexts", [])]
+        if data.get("patch_result"):
+            data["patch_result"] = PatchResult(**data["patch_result"])
         if data.get("test_result"):
             data["test_result"] = TestResult(**data["test_result"])
         return cls(**data)
