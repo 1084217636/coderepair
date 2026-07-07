@@ -388,3 +388,54 @@ PR handoff
 ```
 
 后面不要继续无限加功能。V9 应该做最终收口：demo case、简历 bullet、架构图、面试问答。
+
+## 22. 项目二最终解决了什么问题？
+
+最终解决的是：
+
+```text
+把“AI 能不能写代码”变成“AI 代码变更能不能进入企业研发流程”。
+```
+
+具体来说：
+
+```text
+1. 用 project 保存仓库、测试命令和历史任务。
+2. 用 task state machine 追踪执行进度。
+3. 用 repo scan 和 context retrieve 提供项目上下文。
+4. 用 workspace 隔离 patch 和 test，避免污染主仓库。
+5. 用 sandbox policy 控制测试命令边界。
+6. 用 retry 和 metrics 处理失败任务。
+7. 用 audit、timeline 和 report 支撑复盘。
+8. 用 PR handoff 把结果交给人类审核。
+```
+
+所以它不是一个“AI 改代码玩具”，而是一个简化版研发效能平台。
+
+## 23. 为什么 V9 之后不继续扩功能？
+
+因为秋招项目最重要的是主线清晰和能讲透。项目二现在已经有：
+
+```text
+项目空间
+代码上下文
+任务状态机
+队列 Worker
+Patch/Test
+失败 retry
+workspace 隔离
+sandbox policy
+PR handoff
+测试证据
+学习和简历文档
+```
+
+继续加大功能，比如完整前端、真实 GitHub App、Docker sandbox、embedding 服务，都会增加维护成本，也会让你短期内难以讲透。后续应该把 V1 到 V9 的演进、瓶颈和取舍学熟。
+
+## 24. 面试官问“你没有实习，怎么证明这个项目有工程性”怎么答？
+
+可以这样答：
+
+```text
+我按公司项目的方式做了版本演进，而不是一次性堆功能。每一版都针对上一个版本的瓶颈升级：同步执行改成 Worker，失败不可恢复改成 retry，污染主仓库改成 workspace，shell=True 改成 sandbox policy，PR 文本改成 handoff。每一版都有测试证据、版本台账和文档复盘，所以这个项目重点体现的是工程闭环和演进能力。
+```

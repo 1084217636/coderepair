@@ -478,3 +478,46 @@ collected 18 items
 V8 只生成 PR 交付包，不自动 push，不自动创建真实 GitHub PR。
 这是刻意保守的边界：AI 准备材料，人类审核后执行。
 ```
+
+## V9 最终学习包验证
+
+本版新增：
+
+```text
+docs/FINAL_PROJECT_LEARNING_PACKAGE.md
+docs/FINAL_RESUME_AND_INTERVIEW_PACK.md
+docs/FINAL_DEMO_CASES.md
+```
+
+同步更新：
+
+```text
+docs/VERSION_TASK_TRACKER.csv
+docs/PERFORMANCE_AND_EVOLUTION.md
+docs/NEXT_IMPLEMENTATION_PLAN.md
+docs/AUTUMN_RECRUIT_STUDY_GUIDE.md
+docs/DEERFLOW_CODE_MAP.md
+docs/DEERFLOW_INTERVIEW_QA.md
+```
+
+验证命令：
+
+```bash
+python3 -m compileall -q backend/app/gateway/routers backend/app/gateway/app.py backend/packages/harness/deerflow/code_change backend/tests/code_change
+PYTHONPATH=backend:backend/packages/harness /tmp/deerflow-v7-test-venv/bin/python -m pytest backend/tests/code_change
+git diff --check
+```
+
+实际结果：
+
+```text
+compileall 通过。
+pytest：18 passed, 1 warning in 1.59s。
+git diff --check 通过。
+```
+
+V9 说明：
+
+```text
+V9 不新增核心代码功能，而是把项目二收口成可学习、可演示、可写简历、可面试追问的最终版本。
+```

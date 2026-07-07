@@ -80,3 +80,33 @@ Worker 如何消费任务？
 第 5 天：读 DEERFLOW_INTERVIEW_QA，自问自答 Cursor/Copilot 区别。
 第 6-7 天：准备一个 demo：坏代码 -> patch -> worker -> tests -> PR draft。
 ```
+
+## 项目二收尾后的学习资料顺序
+
+现在项目二已经进入 V9 收尾版，学习时按下面顺序读：
+
+```text
+1. FINAL_PROJECT_LEARNING_PACKAGE.md
+2. FINAL_DEMO_CASES.md
+3. FINAL_RESUME_AND_INTERVIEW_PACK.md
+4. VERSION_TASK_TRACKER.csv
+5. DEERFLOW_CODE_MAP.md
+6. PERFORMANCE_AND_EVOLUTION.md
+7. DEERFLOW_INTERVIEW_QA.md
+```
+
+学习目标：
+
+```text
+1. 能画出 project -> task -> worker -> workspace -> test -> report -> PR handoff。
+2. 能讲清楚 V1 到 V8 每一版解决了什么瓶颈。
+3. 能解释为什么选择 DeerFlow 二开，而不是自己从零写 Agent。
+4. 能跑通成功 demo 和失败 retry demo。
+5. 能说清楚当前边界和生产化升级方案。
+```
+
+秋招复习重点：
+
+```text
+FastAPI、pytest、Git diff、任务状态机、队列 Worker、RAG、沙箱、GitHub PR 流程。
+```

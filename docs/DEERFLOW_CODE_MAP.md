@@ -57,7 +57,10 @@ Timeline / Audit
 | `repo_scanner.py` | 扫描仓库文件，排除 `.git`、`.venv`、`node_modules` 等噪音 |
 | `context_retriever.py` | 基于需求关键词召回相关代码文件 |
 | `patcher.py` | 校验并应用 unified diff，生成 patch 日志和 PR 草稿 |
-| `test_runner.py` | 执行项目测试命令并保存 `test.log` |
+| `workspace.py` | 为每个任务准备 local-copy workspace，避免污染主仓库 |
+| `sandbox_policy.py` | 保存命令白名单、超时、日志截断等执行边界 |
+| `test_runner.py` | 使用 shell=False 执行项目测试命令并保存 `test.log` |
+| `pr_handoff.py` | 生成 `pr_handoff.json` 和 `create_draft_pr.sh` |
 | `report_writer.py` | 生成 `task_report.md`、patch 摘要和 `audit.json` |
 | `cli.py` | 命令行入口：project create/list/status、task run |
 
@@ -132,6 +135,10 @@ PR_CREATED / FAILED
                 ├── patch_check.log
                 ├── patch_apply.log
                 ├── pr_body.md
+                ├── pr_handoff.json
+                ├── create_draft_pr.sh
+                ├── workspace_manifest.json
+                ├── sandbox_policy.json
                 ├── task_report.md
                 ├── test.log
                 └── audit.json
@@ -150,15 +157,17 @@ backend/app/gateway/routers/code_change.py
 /api/code-change/projects/{project_id}/tasks/{task_id}
 /api/code-change/projects/{project_id}/tasks/{task_id}/report
 /api/code-change/projects/{project_id}/tasks/{task_id}/pr-body
+/api/code-change/projects/{project_id}/tasks/{task_id}/retry
 /api/code-change/worker/run-once
+/api/code-change/metrics
 ```
 
-V5 再考虑：
+收尾后生产化再考虑：
 
 ```text
-DeerFlow sandbox
-DeerFlow memory
-DeerFlow tools
-GitHub PR
-IM webhook
+Docker / DeerFlow sandbox
+DeerFlow memory 或 persistence
+Redis Stream / PostgreSQL queue
+Prometheus / Grafana
+GitHub App 权限审批
 ```

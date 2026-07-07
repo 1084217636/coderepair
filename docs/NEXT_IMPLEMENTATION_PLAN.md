@@ -375,30 +375,33 @@ V8 当前边界：
 3. 真正的 GitHub API 自动化可以作为扩展，但不建议继续堆到秋招主线里。
 ```
 
-下一步 V9：最终收口
+V9 已落地：最终收口
 
 ```text
-1. 固定 3 个 demo case。
+1. 固定 demo case。
 2. 整理最终简历 bullet。
-3. 整理 15 个高频面试问答。
+3. 整理高频面试问答。
 4. 明确“不做”的生产化边界：分布式队列、容器级 sandbox、真实自动 PR、权限系统。
 ```
 
-### V9：回推 IM 群聊
+### V9：最终学习和面试收口
 
 目标：
 
 ```text
-把项目二的任务报告回推到项目一 IM 群聊，形成两个项目之间的叙事连接。
+把项目二收成可学习、可演示、可写简历、可被面试官追问的最终版本。
 ```
 
-先只做可选 webhook：
+已落地产物：
 
 ```text
-任务完成 -> 调用 IM Bot webhook -> 群里发送任务摘要、测试结果、风险点
+docs/FINAL_PROJECT_LEARNING_PACKAGE.md
+docs/FINAL_RESUME_AND_INTERVIEW_PACK.md
+docs/FINAL_DEMO_CASES.md
+docs/VERSION_TASK_TRACKER.csv
 ```
 
-V6 不作为第一阶段必做。
+原先“回推 IM 群聊”不再作为项目二必做功能。它可以作为两个项目之间的扩展叙事，但不进入秋招主线，避免项目二继续发散。
 
 ## 3. 每次 AI 帮你改完必须补的内容
 
@@ -426,10 +429,11 @@ docs/DEERFLOW_INTERVIEW_QA.md
 
 ## 4. 下一步立刻执行
 
-当前项目二已经完成 V0、V1、V2、V3、V4、V5、V6、V7、V8。下一步建议进入 V9 收口：
+当前项目二已经完成 V0、V1、V2、V3、V4、V5、V6、V7、V8、V9。下一步进入学习和演示阶段：
 
 ```text
 1. 不再继续堆大功能。
-2. 固定 demo、简历 bullet、面试回答。
-3. 把项目讲成研发效能平台，而不是 AI 写代码玩具。
+2. 按 FINAL_DEMO_CASES.md 跑成功 demo 和失败 retry demo。
+3. 按 FINAL_RESUME_AND_INTERVIEW_PACK.md 准备简历 bullet 和面试回答。
+4. 把项目讲成研发效能平台，而不是 AI 写代码玩具。
 ```
