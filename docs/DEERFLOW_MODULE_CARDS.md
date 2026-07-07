@@ -404,7 +404,53 @@ local-copy 是文件系统隔离，不是容器隔离。它能防止主仓库被
 能回答“AI 改错代码怎么办”：不让 Agent 直接改主分支或主仓库，而是在可丢弃 workspace 中改，测试通过后再进入 PR/人工审核。
 ```
 
-## 13. V3 API 当前边界
+## 13. Sandbox Policy
+
+位置：
+
+```text
+backend/packages/harness/deerflow/code_change/sandbox_policy.py
+backend/packages/harness/deerflow/code_change/test_runner.py
+```
+
+职责：
+
+```text
+约束测试命令的执行方式，避免 test_command 直接以 shell=True 执行任意命令。
+```
+
+关键结构：
+
+```text
+SandboxPolicy
+SandboxPolicyViolation
+build_command
+write_policy
+```
+
+默认策略：
+
+```text
+allowed_executables = python / python3 / pytest / go / npm / pnpm / yarn / mvn / gradle
+timeout_seconds = 120
+max_log_bytes = 64000
+shell=False
+```
+
+产物：
+
+```text
+sandbox_policy.json
+test.log
+```
+
+当前边界：
+
+```text
+还不是容器隔离。V7 解决的是命令执行边界和审计证据，CPU/内存/网络限制要靠后续 Docker/DeerFlow sandbox。
+```
+
+## 14. V3 API 当前边界
 
 ```text
 V3 仍同步执行任务，适合演示和本地平台闭环；生产化需要任务队列和 worker。

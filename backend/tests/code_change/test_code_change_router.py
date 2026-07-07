@@ -54,6 +54,7 @@ def test_code_change_router_runs_patch_task(tmp_path):
     assert task["attempt_count"] == 1
     assert task["sandbox_kind"] == "local-copy"
     assert task["workspace_path"]
+    assert task["workspace_manifest_path"]
     assert task["patch_result"]["changed_files"] == ["app.py"]
     assert (repo / "app.py").read_text(encoding="utf-8") == "def health():\n    return 'bad'\n"
     assert "return 'ok'" in (Path(task["workspace_path"]) / "app.py").read_text(encoding="utf-8")

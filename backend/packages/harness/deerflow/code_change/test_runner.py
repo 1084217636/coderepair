@@ -5,21 +5,65 @@ import time
 from pathlib import Path
 
 from deerflow.code_change.models import TestResult
+from deerflow.code_change.sandbox_policy import SandboxPolicy, SandboxPolicyViolation, build_command, default_policy, write_policy
 
 
-def run_tests(repo_path: str, command: str, artifact_dir: str | Path, timeout: int = 120) -> TestResult:
+def run_tests(repo_path: str, command: str, artifact_dir: str | Path, timeout: int = 120, policy: SandboxPolicy | None = None) -> TestResult:
+    policy = policy or default_policy()
+    if timeout > 0:
+        policy.timeout_seconds = timeout
+    artifacts = Path(artifact_dir)
+    artifacts.mkdir(parents=True, exist_ok=True)
+    log_path = artifacts / "test.log"
+    policy_path = write_policy(policy, artifacts)
     start = time.monotonic()
-    proc = subprocess.run(
-        command,
-        cwd=repo_path,
-        shell=True,
-        text=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        timeout=timeout,
-        check=False,
-    )
+    try:
+        args = build_command(command, policy)
+    except SandboxPolicyViolation as exc:
+        duration = time.monotonic() - start
+        log_path.write_text(f"blocked by sandbox policy: {exc}\n", encoding="utf-8")
+        return TestResult(
+            command=command,
+            exit_code=126,
+            duration_seconds=round(duration, 3),
+            log_path=str(log_path),
+            policy_path=str(policy_path),
+        )
+
+    timed_out = False
+    try:
+        proc = subprocess.run(
+            args,
+            cwd=repo_path,
+            shell=False,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            timeout=policy.timeout_seconds,
+            check=False,
+        )
+        output = proc.stdout
+        exit_code = proc.returncode
+    except subprocess.TimeoutExpired as exc:
+        timed_out = True
+        output = exc.stdout or ""
+        if isinstance(output, bytes):
+            output = output.decode(errors="replace")
+        output += f"\ncommand timed out after {policy.timeout_seconds}s\n"
+        exit_code = 124
     duration = time.monotonic() - start
-    log_path = Path(artifact_dir) / "test.log"
-    log_path.write_text(proc.stdout, encoding="utf-8")
-    return TestResult(command=command, exit_code=proc.returncode, duration_seconds=round(duration, 3), log_path=str(log_path))
+    output_bytes = output.encode("utf-8")
+    truncated = len(output_bytes) > policy.max_log_bytes
+    if truncated:
+        output_bytes = output_bytes[: policy.max_log_bytes] + b"\n...[truncated by sandbox policy]\n"
+        output = output_bytes.decode("utf-8", errors="replace")
+    log_path.write_text(output, encoding="utf-8")
+    return TestResult(
+        command=command,
+        exit_code=exit_code,
+        duration_seconds=round(duration, 3),
+        log_path=str(log_path),
+        timed_out=timed_out,
+        log_truncated=truncated,
+        policy_path=str(policy_path),
+    )

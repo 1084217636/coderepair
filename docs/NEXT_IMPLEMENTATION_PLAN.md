@@ -329,7 +329,34 @@ V6 当前边界：
 3. 对通过测试的 patch 生成 GitHub draft PR。
 ```
 
-### V8：回推 IM 群聊
+V7 已落地：
+
+```text
+1. 新增 sandbox_policy.py，定义 allowed_executables、timeout_seconds、max_log_bytes、network_disabled。
+2. test_runner 改为 shlex.split + shell=False，拒绝 shell operator 和非白名单命令。
+3. 每个任务输出 sandbox_policy.json。
+4. workspace.py 输出 workspace_manifest.json，记录文件数、大小、忽略目录和复制耗时。
+5. TestResult 新增 timed_out / log_truncated / policy_path。
+6. 测试覆盖 shell operator 被阻断、python 命令正常执行、manifest 生成。
+```
+
+V7 当前边界：
+
+```text
+1. 仍不是容器级安全隔离。
+2. 没有限制 CPU/内存/网络。
+3. 命令白名单较保守，复杂测试命令需要后续模板化支持。
+```
+
+下一步 V8：
+
+```text
+1. 接 Docker/DeerFlow sandbox。
+2. 接 GitHub draft PR。
+3. 将任务完成摘要回推项目一 IM 群聊。
+```
+
+### V9：回推 IM 群聊
 
 目标：
 
@@ -371,10 +398,10 @@ docs/DEERFLOW_INTERVIEW_QA.md
 
 ## 4. 下一步立刻执行
 
-当前项目二已经完成 V0、V1、V2、V3、V4、V5、V6。下一步建议进入 V7：
+当前项目二已经完成 V0、V1、V2、V3、V4、V5、V6、V7。下一步建议进入 V8：
 
 ```text
-1. 把 local-copy workspace 升级成 Docker/DeerFlow sandbox。
+1. 把 local-copy + policy 升级成 Docker/DeerFlow sandbox。
 2. 接 GitHub draft PR。
 3. 为 sandbox 和 PR 生成更多审计证据。
 ```

@@ -24,6 +24,7 @@ def render_task_report(task: Task) -> str:
         f"- Sandbox: `{task.sandbox_kind or 'none'}`",
         f"- Source repo: `{task.source_repo_path or 'n/a'}`",
         f"- Workspace: `{task.workspace_path or 'n/a'}`",
+        f"- Workspace manifest: `{task.workspace_manifest_path or 'n/a'}`",
         "",
         "## Retrieved Context",
         "",
@@ -64,6 +65,9 @@ def render_task_report(task: Task) -> str:
                 f"- Command: `{task.test_result.command}`",
                 f"- Exit code: `{task.test_result.exit_code}`",
                 f"- Log: `{task.test_result.log_path}`",
+                f"- Policy: `{task.test_result.policy_path or 'n/a'}`",
+                f"- Timed out: `{task.test_result.timed_out}`",
+                f"- Log truncated: `{task.test_result.log_truncated}`",
             ]
         )
     else:

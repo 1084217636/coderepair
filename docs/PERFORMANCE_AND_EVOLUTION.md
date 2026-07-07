@@ -228,3 +228,49 @@ task.json / audit.json 记录 source_repo_path、workspace_path、sandbox_kind
 3. 增加 workspace manifest，记录复制文件数、大小、忽略目录和执行耗时。
 4. 接 GitHub API，把通过测试的 diff 创建成 draft PR。
 ```
+
+## V7：Sandbox policy 与执行边界强化
+
+当前能力：
+
+```text
+prepare workspace
+  ↓
+write workspace_manifest.json
+  ↓
+write sandbox_policy.json
+  ↓
+test_runner shlex.split(command)
+  ↓
+拒绝 shell operator 和非白名单 executable
+  ↓
+subprocess.run(shell=False)
+  ↓
+记录 timeout / log_truncated / policy_path
+```
+
+相比 V6 的改进：
+
+```text
+1. 不再用 shell=True 执行测试命令，降低命令注入风险。
+2. 增加 allowed_executables 白名单，默认只允许 python/go/npm/mvn 等常见测试工具。
+3. 增加 sandbox_policy.json，明确当前执行策略。
+4. 增加 workspace_manifest.json，记录复制文件数、大小、忽略目录和耗时。
+5. test.log 支持按 max_log_bytes 截断，避免失败日志无限膨胀。
+```
+
+当前边界：
+
+```text
+1. V7 仍不是容器级 sandbox，不能限制 CPU、内存、网络和系统调用。
+2. 复杂项目常用 bash -lc、make test 或多命令串联，当前白名单会阻断，需要后续做项目级命令模板。
+3. workspace 仍是全量复制，大仓库成本较高。
+```
+
+下一步优化：
+
+```text
+1. 引入 Docker/DeerFlow sandbox，在容器内执行 test_command。
+2. 将 policy 扩展为项目级配置，允许审核后的 make/go/npm 命令模板。
+3. 接 GitHub API 生成 branch、commit 和 draft PR。
+```

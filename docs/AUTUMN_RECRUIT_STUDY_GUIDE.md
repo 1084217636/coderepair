@@ -66,6 +66,7 @@ Worker 如何消费任务？
 3. Docker sandbox 如何限制 CPU、内存、网络。
 4. Prometheus/Grafana 如何看任务失败率、队列积压和测试耗时。
 5. GitHub API 如何创建 branch、commit、draft PR。
+6. shell=True 为什么危险，shell=False + command whitelist 能解决什么问题。
 ```
 
 推荐复习顺序：

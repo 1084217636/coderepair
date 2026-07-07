@@ -323,3 +323,33 @@ workspace 清理策略
 ```
 
 所以面试时不要夸大。正确说法是：我先把 patch/test 从主仓库移到隔离 workspace，下一步会接 Docker 或 DeerFlow sandbox。
+
+## 18. V7 为什么要把 shell=True 改掉？
+
+因为 `shell=True` 会把 test_command 交给 shell 解析，风险更大，比如命令串联、重定向、管道和危险删除命令。V7 改成：
+
+```text
+shlex.split(command)
+  ↓
+检查 shell operator
+  ↓
+检查 executable 白名单
+  ↓
+subprocess.run(shell=False)
+```
+
+这不是完整沙箱，但已经比“任意 shell 命令”安全很多，也能向面试官说明我知道 AI 执行命令必须有边界。
+
+## 19. V7 的 sandbox_policy.json 有什么用？
+
+它是审计产物，记录这次任务用了什么执行策略：
+
+```text
+allowed_executables
+timeout_seconds
+max_log_bytes
+network_disabled
+sandbox_kind
+```
+
+后续接 Docker/DeerFlow sandbox 时，可以把它扩展成真正的资源限制配置。

@@ -391,3 +391,48 @@ collected 15 items
 local-copy 只能解决“不污染主仓库”，还不能解决 CPU/内存/网络隔离。
 下一版应接 Docker 或 DeerFlow sandbox。
 ```
+
+## V7 Sandbox Policy 与执行边界验证
+
+本版新增：
+
+```text
+backend/packages/harness/deerflow/code_change/sandbox_policy.py
+sandbox_policy.json
+workspace_manifest.json
+TestResult.timed_out
+TestResult.log_truncated
+TestResult.policy_path
+test_runner shell=False
+```
+
+验证命令：
+
+```bash
+python3 -m compileall -q backend/app/gateway/routers backend/app/gateway/app.py backend/packages/harness/deerflow/code_change backend/tests/code_change
+PYTHONPATH=backend:backend/packages/harness /tmp/deerflow-v7-test-venv/bin/python -m pytest backend/tests/code_change
+```
+
+实际结果：
+
+```text
+compileall：通过。
+collected 17 items
+17 passed, 1 warning in 0.53s
+```
+
+测试覆盖：
+
+```text
+1. shell operator `&&` 被 sandbox policy 阻断。
+2. python3 测试命令 shell=False 正常执行。
+3. workspace_manifest.json 记录 file_count / ignored_dirs。
+4. sandbox_policy.json 随任务产物保存。
+5. API 返回 workspace_manifest_path。
+```
+
+当前边界：
+
+```text
+V7 不是 Docker sandbox；它强化了命令执行边界，但不能限制 CPU/内存/网络。
+```

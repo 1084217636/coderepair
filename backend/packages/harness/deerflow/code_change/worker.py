@@ -64,6 +64,7 @@ def execute_task(store: CodeChangeStore, task: Task) -> Task:
         workspace = prepare_workspace(project.repo_path, task_dir)
         task.source_repo_path = workspace.source_repo_path
         task.workspace_path = workspace.workspace_path
+        task.workspace_manifest_path = workspace.manifest_path
         task.sandbox_kind = workspace.sandbox_kind
         if requested_patch.exists():
             transition(task, TaskStatus.GENERATING_PATCH, f"Retrieved {len(task.contexts)} context items; using patch artifact.")

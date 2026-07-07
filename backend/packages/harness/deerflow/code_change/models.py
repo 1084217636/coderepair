@@ -82,6 +82,9 @@ class TestResult:
     exit_code: int
     duration_seconds: float
     log_path: str
+    timed_out: bool = False
+    log_truncated: bool = False
+    policy_path: str = ""
 
     @property
     def passed(self) -> bool:
@@ -120,6 +123,7 @@ class Task:
     artifact_dir: str = ""
     source_repo_path: str = ""
     workspace_path: str = ""
+    workspace_manifest_path: str = ""
     sandbox_kind: str = ""
     created_at: str = ""
     updated_at: str = ""
