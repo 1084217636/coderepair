@@ -516,6 +516,13 @@ pytest：18 passed, 1 warning in 1.59s。
 git diff --check 通过。
 ```
 
+CLI demo smoke：
+
+```text
+Demo A：成功 patch -> worker run-once -> status=PR_CREATED，生成 13 个 task artifact。
+Demo B：错误 patch -> worker run-once -> status=FAILED，metrics 显示 failed_count=1、retryable_failed_count=1、attempts_total=1。
+```
+
 V9 说明：
 
 ```text
