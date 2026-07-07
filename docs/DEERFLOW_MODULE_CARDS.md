@@ -450,7 +450,48 @@ test.log
 还不是容器隔离。V7 解决的是命令执行边界和审计证据，CPU/内存/网络限制要靠后续 Docker/DeerFlow sandbox。
 ```
 
-## 14. V3 API 当前边界
+## 14. PR Handoff
+
+位置：
+
+```text
+backend/packages/harness/deerflow/code_change/pr_handoff.py
+```
+
+职责：
+
+```text
+在 patch/test 通过后生成可人工审核的 GitHub draft PR 交付包。
+```
+
+产物：
+
+```text
+pr_handoff.json
+create_draft_pr.sh
+```
+
+关键内容：
+
+```text
+repo_url
+source_repo_path
+base_branch
+branch_name
+commit_message
+patch_path
+changed_files
+test_result
+gh pr create --draft command
+```
+
+当前边界：
+
+```text
+系统不自动 push、不自动创建 PR。V8 的目标是把任务闭环交付到“人类可审核执行”的最后一步。
+```
+
+## 15. V3 API 当前边界
 
 ```text
 V3 仍同步执行任务，适合演示和本地平台闭环；生产化需要任务队列和 worker。

@@ -42,7 +42,7 @@ def test_task_runner_applies_patch_and_writes_pr_body(tmp_path):
     )
     command = f"{sys.executable} -c \"import app; assert app.health() == 'ok'; print('tests ok')\""
     store = CodeChangeStore(tmp_path / "state")
-    store.create_project("demo", str(repo), command)
+    store.create_project("demo", str(repo), command, repo_url="git@github.com:example/demo.git")
 
     task = run_task(store, "demo", "fix health function", patch_file=str(patch))
 
@@ -57,6 +57,9 @@ def test_task_runner_applies_patch_and_writes_pr_body(tmp_path):
     assert "return 'ok'" in (Path(task.workspace_path) / "app.py").read_text(encoding="utf-8")
     assert (artifact_dir / "patch.diff").exists()
     assert (artifact_dir / "pr_body.md").exists()
+    assert (artifact_dir / "pr_handoff.json").exists()
+    assert (artifact_dir / "create_draft_pr.sh").exists()
     assert "Result: `PASS`" in (artifact_dir / "pr_body.md").read_text(encoding="utf-8")
+    assert "gh pr create --draft" in (artifact_dir / "create_draft_pr.sh").read_text(encoding="utf-8")
     assert (artifact_dir / "audit.json").exists()
     assert (artifact_dir / "sandbox_policy.json").exists()

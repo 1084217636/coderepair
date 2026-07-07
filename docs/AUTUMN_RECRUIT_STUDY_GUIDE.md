@@ -67,6 +67,7 @@ Worker 如何消费任务？
 4. Prometheus/Grafana 如何看任务失败率、队列积压和测试耗时。
 5. GitHub API 如何创建 branch、commit、draft PR。
 6. shell=True 为什么危险，shell=False + command whitelist 能解决什么问题。
+7. 为什么 V8 只生成 PR handoff，而不是让 Agent 自动 push。
 ```
 
 推荐复习顺序：

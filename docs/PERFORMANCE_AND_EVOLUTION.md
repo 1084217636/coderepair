@@ -274,3 +274,43 @@ subprocess.run(shell=False)
 2. 将 policy 扩展为项目级配置，允许审核后的 make/go/npm 命令模板。
 3. 接 GitHub API 生成 branch、commit 和 draft PR。
 ```
+
+## V8：GitHub Draft PR 交付包
+
+当前能力：
+
+```text
+patch/test passed
+  ↓
+write pr_body.md
+  ↓
+write pr_handoff.json
+  ↓
+write create_draft_pr.sh
+  ↓
+人工审核后执行脚本创建 branch / commit / draft PR
+```
+
+相比 V7 的改进：
+
+```text
+1. 不再只停留在 PR 文本草稿，而是把 branch、commit、push、gh pr create 命令都生成出来。
+2. pr_handoff.json 保存 repo_url、base_branch、branch_name、patch_path、changed_files、test_result。
+3. create_draft_pr.sh 默认不自动执行，避免 Agent 直接推送或打开 PR。
+4. 这和企业研发流程更一致：AI 准备交付包，人类审核后进入真实 GitHub 流程。
+```
+
+当前边界：
+
+```text
+1. V8 不直接调用 GitHub API，不自动 push。
+2. 真实 draft PR 仍需要人工确认后运行脚本。
+3. 如果项目没有 repo_url，只生成本地 handoff，不生成 gh pr create 命令。
+```
+
+收尾建议：
+
+```text
+项目二已经具备秋招主线：项目空间、RAG、patch/test、worker、retry、sandbox policy、PR handoff。
+下一版 V9 应该收口为最终简历项目，不再继续扩功能。
+```

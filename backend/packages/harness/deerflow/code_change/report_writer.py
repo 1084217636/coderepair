@@ -74,6 +74,16 @@ def render_task_report(task: Task) -> str:
         lines.append("- Tests not run.")
     if task.pr_body_path:
         lines.extend(["", "## PR Draft", "", f"- PR body: `{task.pr_body_path}`"])
+    if task.pr_handoff_path:
+        lines.extend(
+            [
+                "",
+                "## PR Handoff",
+                "",
+                f"- Handoff: `{task.pr_handoff_path}`",
+                f"- Draft PR script: `{task.pr_create_script_path or 'n/a'}`",
+            ]
+        )
     if task.error:
         lines.extend(["", "## Error", "", task.error])
     lines.append("")

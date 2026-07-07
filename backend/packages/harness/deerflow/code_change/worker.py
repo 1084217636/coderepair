@@ -5,6 +5,7 @@ from pathlib import Path
 from deerflow.code_change.context_retriever import retrieve_context
 from deerflow.code_change.models import Task, TaskStatus
 from deerflow.code_change.patcher import apply_patch_text, write_pr_body
+from deerflow.code_change.pr_handoff import write_pr_handoff
 from deerflow.code_change.repo_scanner import scan_repo
 from deerflow.code_change.report_writer import write_reports
 from deerflow.code_change.state_machine import transition
@@ -83,6 +84,9 @@ def execute_task(store: CodeChangeStore, task: Task) -> Task:
             if task.patch_result:
                 pr_body = write_pr_body(task.task_id, task.requirement, task.patch_result, True, task_dir)
                 task.pr_body_path = str(pr_body)
+                handoff = write_pr_handoff(project, task, task.patch_result, task.test_result, task_dir)
+                task.pr_handoff_path = handoff.handoff_path
+                task.pr_create_script_path = handoff.script_path
                 transition(task, TaskStatus.PR_CREATED, "Generated PR draft with diff explanation and test result.")
         else:
             transition(task, TaskStatus.FAILED, "Tests failed; inspect test.log.", error="test command returned non-zero exit code")

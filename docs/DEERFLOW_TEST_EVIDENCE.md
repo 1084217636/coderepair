@@ -436,3 +436,45 @@ collected 17 items
 ```text
 V7 不是 Docker sandbox；它强化了命令执行边界，但不能限制 CPU/内存/网络。
 ```
+
+## V8 GitHub Draft PR 交付包验证
+
+本版新增：
+
+```text
+backend/packages/harness/deerflow/code_change/pr_handoff.py
+Task.pr_handoff_path
+Task.pr_create_script_path
+pr_handoff.json
+create_draft_pr.sh
+```
+
+验证命令：
+
+```bash
+python3 -m compileall -q backend/app/gateway/routers backend/app/gateway/app.py backend/packages/harness/deerflow/code_change backend/tests/code_change
+PYTHONPATH=backend:backend/packages/harness /tmp/deerflow-v7-test-venv/bin/python -m pytest backend/tests/code_change
+```
+
+实际结果：
+
+```text
+collected 18 items
+18 passed, 1 warning in 0.51s
+```
+
+测试覆盖：
+
+```text
+1. patch/test 通过后生成 pr_body.md。
+2. 生成 pr_handoff.json。
+3. repo_url 存在时生成 gh pr create --draft 命令。
+4. API 返回 pr_handoff_path / pr_create_script_path。
+```
+
+当前边界：
+
+```text
+V8 只生成 PR 交付包，不自动 push，不自动创建真实 GitHub PR。
+这是刻意保守的边界：AI 准备材料，人类审核后执行。
+```

@@ -353,3 +353,38 @@ sandbox_kind
 ```
 
 后续接 Docker/DeerFlow sandbox 时，可以把它扩展成真正的资源限制配置。
+
+## 20. V8 为什么不直接自动创建 GitHub PR？
+
+因为自动 push 和自动开 PR 是高风险动作。当前项目定位是企业内部代码变更平台，正确边界是：
+
+```text
+AI 生成 patch / 测试 / PR 描述 / PR handoff
+  ↓
+人类审核
+  ↓
+执行 create_draft_pr.sh
+  ↓
+GitHub draft PR
+```
+
+这样既完成了流程闭环，也不会让 Agent 直接操作远程仓库。
+
+## 21. 项目二是不是该收尾了？
+
+是。项目二现在已经具备秋招项目主线：
+
+```text
+项目空间
+代码扫描和上下文召回
+Patch 应用
+测试闭环
+任务队列和 Worker
+失败 retry
+workspace sandbox
+sandbox policy
+PR handoff
+审计和报告
+```
+
+后面不要继续无限加功能。V9 应该做最终收口：demo case、简历 bullet、架构图、面试问答。

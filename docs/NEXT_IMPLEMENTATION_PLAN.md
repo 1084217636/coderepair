@@ -356,6 +356,34 @@ V7 当前边界：
 3. 将任务完成摘要回推项目一 IM 群聊。
 ```
 
+V8 已落地：
+
+```text
+1. 新增 pr_handoff.py。
+2. PR_CREATED 时生成 pr_handoff.json。
+3. PR_CREATED 时生成 create_draft_pr.sh。
+4. Task 新增 pr_handoff_path / pr_create_script_path。
+5. Router/CLI 返回 task 时能看到 PR handoff 产物路径。
+6. 测试覆盖 gh pr create --draft 命令生成。
+```
+
+V8 当前边界：
+
+```text
+1. 不自动 push，不自动创建真实 PR。
+2. 需要人工审核 pr_handoff.json 和 create_draft_pr.sh 后再执行。
+3. 真正的 GitHub API 自动化可以作为扩展，但不建议继续堆到秋招主线里。
+```
+
+下一步 V9：最终收口
+
+```text
+1. 固定 3 个 demo case。
+2. 整理最终简历 bullet。
+3. 整理 15 个高频面试问答。
+4. 明确“不做”的生产化边界：分布式队列、容器级 sandbox、真实自动 PR、权限系统。
+```
+
 ### V9：回推 IM 群聊
 
 目标：
@@ -398,10 +426,10 @@ docs/DEERFLOW_INTERVIEW_QA.md
 
 ## 4. 下一步立刻执行
 
-当前项目二已经完成 V0、V1、V2、V3、V4、V5、V6、V7。下一步建议进入 V8：
+当前项目二已经完成 V0、V1、V2、V3、V4、V5、V6、V7、V8。下一步建议进入 V9 收口：
 
 ```text
-1. 把 local-copy + policy 升级成 Docker/DeerFlow sandbox。
-2. 接 GitHub draft PR。
-3. 为 sandbox 和 PR 生成更多审计证据。
+1. 不再继续堆大功能。
+2. 固定 demo、简历 bullet、面试回答。
+3. 把项目讲成研发效能平台，而不是 AI 写代码玩具。
 ```

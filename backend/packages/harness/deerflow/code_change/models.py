@@ -120,6 +120,8 @@ class Task:
     patch_result: PatchResult | None = None
     test_result: TestResult | None = None
     pr_body_path: str = ""
+    pr_handoff_path: str = ""
+    pr_create_script_path: str = ""
     artifact_dir: str = ""
     source_repo_path: str = ""
     workspace_path: str = ""
