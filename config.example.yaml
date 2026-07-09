@@ -244,16 +244,16 @@ models:
   #         type: disabled
 
   # Example: DeepSeek model (with thinking support)
-  # - name: deepseek-v3
-  #   display_name: DeepSeek V3 (Thinking)
+  # - name: deepseek-v4-flash
+  #   display_name: DeepSeek V4 Flash (Thinking)
   #   use: deerflow.models.patched_deepseek:PatchedChatDeepSeek
-  #   model: deepseek-reasoner
+  #   model: deepseek-v4-flash
   #   api_key: $DEEPSEEK_API_KEY
   #   timeout: 600.0
   #   max_retries: 2
   #   max_tokens: 8192
   #   supports_thinking: true
-  #   supports_vision: false  # DeepSeek V3 does not support vision
+  #   supports_vision: false  # DeepSeek V4 text models do not support vision
   #   when_thinking_enabled:
   #     extra_body:
   #       thinking:

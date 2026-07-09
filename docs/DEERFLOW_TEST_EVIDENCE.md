@@ -528,3 +528,46 @@ V9 说明：
 ```text
 V9 不新增核心代码功能，而是把项目二收口成可学习、可演示、可写简历、可面试追问的最终版本。
 ```
+
+## V9.1 DeepSeek V4 配置收尾验证
+
+本版处理：
+
+```text
+1. 本地 .env 保存 DEEPSEEK_API_KEY，不提交到 Git。
+2. 本地 config.yaml 引用 $DEEPSEEK_API_KEY，并默认使用 deepseek-v4-flash。
+3. setup wizard / config.example / 中英文文档示例从旧 DeepSeek 模型名迁移到 deepseek-v4-flash。
+4. deepseek-v4-pro 保留为更重代码任务的可选模型。
+```
+
+验证命令：
+
+```bash
+git check-ignore -v .env config.yaml
+python3 -m py_compile scripts/wizard/providers.py scripts/wizard/writer.py backend/tests/test_patched_deepseek.py
+python3 - <<'PY'
+from pathlib import Path
+import yaml
+for path in ["config.yaml", "config.example.yaml"]:
+    data = yaml.safe_load(Path(path).read_text())
+    assert isinstance(data, dict)
+    assert data.get("config_version")
+assert "sk-" not in Path("config.yaml").read_text()
+PY
+```
+
+实际结果：
+
+```text
+Git 忽略校验通过：.env 和 config.yaml 均不进入提交。
+Python 语法编译通过。
+YAML 解析通过。
+本地 config.yaml 不含真实 API key。
+```
+
+未完成验证：
+
+```text
+uv / pytest / langchain-deepseek 当前机器未安装，无法直接执行 backend/tests/test_patched_deepseek.py。
+这不是业务测试失败，而是本地 Python 依赖环境未初始化。
+```

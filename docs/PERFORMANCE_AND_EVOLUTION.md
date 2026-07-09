@@ -350,3 +350,29 @@ write create_draft_pr.sh
 3. 把 JSON 存储、JSONL 队列、local-copy sandbox 的生产化升级方案背熟。
 4. 不再继续新增大功能，避免项目主线发散。
 ```
+
+## V9.1：DeepSeek V4 配置收尾
+
+为什么要做：
+
+```text
+DeepSeek 旧模型名 deepseek-chat / deepseek-reasoner 即将弃用。
+项目二是基于 DeerFlow 的二开项目，模型配置和 setup wizard 是真实使用入口；
+如果仍保留旧模型名，学习和演示时会出现“文档能看但实际启动踩坑”的问题。
+```
+
+本次优化：
+
+```text
+1. setup wizard 默认 DeepSeek 模型改为 deepseek-v4-flash，并保留 deepseek-v4-pro。
+2. config.example 和前端文档示例同步到 deepseek-v4-flash。
+3. 本地 .env 保存真实 key，本地 config.yaml 只引用 $DEEPSEEK_API_KEY。
+4. .env / config.yaml 均通过 .gitignore 忽略，避免把密钥推到远程仓库。
+```
+
+面试可讲：
+
+```text
+我没有把 API key 写进配置仓库，而是用环境变量注入。
+模型名升级也没有散落改业务逻辑，只改配置入口、向导默认值和文档示例，保持二开低侵入。
+```
