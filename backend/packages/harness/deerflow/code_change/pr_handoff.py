@@ -77,13 +77,7 @@ def build_commands(project: Project, branch_name: str, commit_message: str, titl
     ]
     if project.repo_url:
         commands.append(f"git push -u origin {shlex.quote(branch_name)}")
-        commands.append(
-            "gh pr create --draft "
-            f"--base {shlex.quote(project.default_branch)} "
-            f"--head {shlex.quote(branch_name)} "
-            f"--title {shlex.quote(title)} "
-            f"--body-file {shlex.quote(str(body_path))}"
-        )
+        commands.append(f"gh pr create --draft --base {shlex.quote(project.default_branch)} --head {shlex.quote(branch_name)} --title {shlex.quote(title)} --body-file {shlex.quote(str(body_path))}")
     else:
         commands.append("# repo_url is empty; configure origin before pushing and creating a draft PR.")
     return commands

@@ -1,20 +1,19 @@
 from __future__ import annotations
 
 import json
+import re
 import shlex
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
-
 SHELL_OPERATORS = {"&&", "||", ";", "|", ">", ">>", "<", "$(", "`"}
+VERSIONED_PYTHON = re.compile(r"^python(?P<major>\d+)\.(?P<minor>\d+)(?:\.\d+)?$")
 
 
 @dataclass(slots=True)
 class SandboxPolicy:
     sandbox_kind: str = "local-copy"
-    allowed_executables: list[str] = field(
-        default_factory=lambda: ["python", "python3", "pytest", "go", "npm", "pnpm", "yarn", "mvn", "gradle"]
-    )
+    allowed_executables: list[str] = field(default_factory=lambda: ["python", "python3", "pytest", "go", "npm", "pnpm", "yarn", "mvn", "gradle"])
     timeout_seconds: int = 120
     max_log_bytes: int = 64_000
     network_disabled: bool = False
@@ -48,6 +47,16 @@ def build_command(command: str, policy: SandboxPolicy) -> list[str]:
         if part in SHELL_OPERATORS:
             raise SandboxPolicyViolation(f"shell operator is not allowed: {part}")
     executable = Path(parts[0]).name
-    if executable not in set(policy.allowed_executables):
+    if not executable_allowed(executable, policy.allowed_executables):
         raise SandboxPolicyViolation(f"executable is not allowed: {executable}")
     return parts
+
+
+def executable_allowed(executable: str, allowed_executables: list[str]) -> bool:
+    allowed = set(allowed_executables)
+    if executable in allowed:
+        return True
+    match = VERSIONED_PYTHON.fullmatch(executable)
+    if not match:
+        return False
+    return f"python{match.group('major')}" in allowed

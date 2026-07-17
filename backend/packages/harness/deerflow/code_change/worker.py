@@ -13,7 +13,6 @@ from deerflow.code_change.store import CodeChangeStore, now_iso
 from deerflow.code_change.test_runner import run_tests
 from deerflow.code_change.workspace import prepare_workspace
 
-
 REQUESTED_PATCH_NAME = "requested_patch.diff"
 
 
@@ -68,7 +67,8 @@ def execute_task(store: CodeChangeStore, task: Task) -> Task:
         task.workspace_manifest_path = workspace.manifest_path
         task.sandbox_kind = workspace.sandbox_kind
         if requested_patch.exists():
-            transition(task, TaskStatus.GENERATING_PATCH, f"Retrieved {len(task.contexts)} context items; using patch artifact.")
+            transition(task, TaskStatus.PATCH_RECEIVED, f"Retrieved {len(task.contexts)} context items; external patch received.")
+            transition(task, TaskStatus.VALIDATING_PATCH, f"Validating patch artifact {requested_patch}.")
             transition(task, TaskStatus.APPLYING_PATCH, f"Applying patch from {requested_patch} in {workspace.sandbox_kind} workspace.")
             task.patch_result = apply_patch_text(workspace.workspace_path, requested_patch.read_text(encoding="utf-8"), task_dir)
             if not task.patch_result.applied:
@@ -87,7 +87,7 @@ def execute_task(store: CodeChangeStore, task: Task) -> Task:
                 handoff = write_pr_handoff(project, task, task.patch_result, task.test_result, task_dir)
                 task.pr_handoff_path = handoff.handoff_path
                 task.pr_create_script_path = handoff.script_path
-                transition(task, TaskStatus.PR_CREATED, "Generated PR draft with diff explanation and test result.")
+                transition(task, TaskStatus.HANDOFF_READY, "Generated review artifacts and draft PR creation handoff.")
         else:
             transition(task, TaskStatus.FAILED, "Tests failed; inspect test.log.", error="test command returned non-zero exit code")
     except Exception as exc:

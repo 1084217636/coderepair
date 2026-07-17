@@ -5,7 +5,7 @@ from deerflow.code_change.repo_scanner import scan_repo
 def test_scan_repo_skips_noise_and_retrieves_context(tmp_path):
     repo = tmp_path / "repo"
     repo.mkdir()
-    (repo / "health.go").write_text("package main\nfunc Health() string { return \"ok\" }\n", encoding="utf-8")
+    (repo / "health.go").write_text('package main\nfunc Health() string { return "ok" }\n', encoding="utf-8")
     (repo / ".git").mkdir()
     (repo / ".git" / "config").write_text("secret", encoding="utf-8")
 

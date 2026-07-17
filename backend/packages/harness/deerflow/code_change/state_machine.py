@@ -3,16 +3,23 @@ from __future__ import annotations
 from deerflow.code_change.models import Task, TaskStatus, TaskStep
 from deerflow.code_change.store import now_iso
 
-
 ALLOWED_TRANSITIONS: dict[TaskStatus, set[TaskStatus]] = {
     TaskStatus.CREATED: {TaskStatus.QUEUED, TaskStatus.PLANNING, TaskStatus.FAILED},
     TaskStatus.QUEUED: {TaskStatus.PLANNING, TaskStatus.FAILED},
     TaskStatus.PLANNING: {TaskStatus.RETRIEVING_CONTEXT, TaskStatus.FAILED},
-    TaskStatus.RETRIEVING_CONTEXT: {TaskStatus.GENERATING_PATCH, TaskStatus.RUNNING_TESTS, TaskStatus.FAILED},
-    TaskStatus.GENERATING_PATCH: {TaskStatus.APPLYING_PATCH, TaskStatus.FAILED},
+    TaskStatus.RETRIEVING_CONTEXT: {
+        TaskStatus.PATCH_RECEIVED,
+        TaskStatus.GENERATING_PATCH,
+        TaskStatus.RUNNING_TESTS,
+        TaskStatus.FAILED,
+    },
+    TaskStatus.PATCH_RECEIVED: {TaskStatus.VALIDATING_PATCH, TaskStatus.FAILED},
+    TaskStatus.VALIDATING_PATCH: {TaskStatus.APPLYING_PATCH, TaskStatus.FAILED},
+    TaskStatus.GENERATING_PATCH: {TaskStatus.VALIDATING_PATCH, TaskStatus.FAILED},
     TaskStatus.APPLYING_PATCH: {TaskStatus.RUNNING_TESTS, TaskStatus.FAILED, TaskStatus.ROLLED_BACK},
     TaskStatus.RUNNING_TESTS: {TaskStatus.REVIEWING, TaskStatus.FAILED},
-    TaskStatus.REVIEWING: {TaskStatus.PR_CREATED, TaskStatus.FAILED},
+    TaskStatus.REVIEWING: {TaskStatus.HANDOFF_READY, TaskStatus.FAILED},
+    TaskStatus.HANDOFF_READY: {TaskStatus.PR_CREATED},
     TaskStatus.PR_CREATED: set(),
     TaskStatus.FAILED: {TaskStatus.QUEUED},
     TaskStatus.ROLLED_BACK: set(),

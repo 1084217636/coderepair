@@ -87,16 +87,8 @@ class CodeChangeStore:
         for task in tasks:
             status_counts[str(task.status)] = status_counts.get(str(task.status), 0) + 1
 
-        retryable_failed = [
-            task
-            for task in tasks
-            if task.status is TaskStatus.FAILED and task.attempt_count < task.max_attempts
-        ]
-        exhausted_failed = [
-            task
-            for task in tasks
-            if task.status is TaskStatus.FAILED and task.attempt_count >= task.max_attempts
-        ]
+        retryable_failed = [task for task in tasks if task.status is TaskStatus.FAILED and task.attempt_count < task.max_attempts]
+        exhausted_failed = [task for task in tasks if task.status is TaskStatus.FAILED and task.attempt_count >= task.max_attempts]
         return {
             "project_id": project_safe_name(project_id) if project_id else "",
             "total_tasks": len(tasks),

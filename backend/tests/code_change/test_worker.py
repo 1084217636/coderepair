@@ -34,7 +34,7 @@ def test_worker_runs_queued_patch_task(tmp_path):
 
     assert finished is not None
     assert finished.task_id == queued.task_id
-    assert finished.status == TaskStatus.PR_CREATED
+    assert finished.status == TaskStatus.HANDOFF_READY
     assert finished.attempt_count == 1
     assert finished.started_at
     assert finished.finished_at
@@ -47,9 +47,10 @@ def test_worker_runs_queued_patch_task(tmp_path):
     assert (tmp_path / "state" / "projects" / "demo" / "tasks" / queued.task_id / "pr_body.md").exists()
 
     metrics = store.task_metrics("demo")
-    assert metrics["status_counts"]["PR_CREATED"] == 1
+    assert metrics["status_counts"]["HANDOFF_READY"] == 1
     assert metrics["queue_depth"] == 0
     assert metrics["attempts_total"] == 1
+    assert [step.name for step in finished.steps][3:6] == ["PATCH_RECEIVED", "VALIDATING_PATCH", "APPLYING_PATCH"]
 
 
 def test_worker_noops_when_queue_is_empty(tmp_path):

@@ -1,5 +1,5 @@
-import sys
 import subprocess
+import sys
 from pathlib import Path
 
 from deerflow.code_change.cli import run_task
@@ -47,7 +47,7 @@ def test_task_runner_applies_patch_and_writes_pr_body(tmp_path):
     task = run_task(store, "demo", "fix health function", patch_file=str(patch))
 
     artifact_dir = tmp_path / "state" / "projects" / "demo" / "tasks" / task.task_id
-    assert task.status == TaskStatus.PR_CREATED
+    assert task.status == TaskStatus.HANDOFF_READY
     assert task.sandbox_kind == "local-copy"
     assert task.workspace_path
     assert task.workspace_manifest_path

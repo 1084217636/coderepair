@@ -50,7 +50,7 @@ def test_code_change_router_runs_patch_task(tmp_path):
     worker_resp = client.post("/api/code-change/worker/run-once")
     assert worker_resp.status_code == 200
     task = worker_resp.json()
-    assert task["status"] == "PR_CREATED"
+    assert task["status"] == "HANDOFF_READY"
     assert task["attempt_count"] == 1
     assert task["sandbox_kind"] == "local-copy"
     assert task["workspace_path"]
@@ -64,7 +64,7 @@ def test_code_change_router_runs_patch_task(tmp_path):
     task_id = task["task_id"]
     detail_resp = client.get(f"/api/code-change/projects/demo/tasks/{task_id}")
     assert detail_resp.status_code == 200
-    assert detail_resp.json()["status"] == "PR_CREATED"
+    assert detail_resp.json()["status"] == "HANDOFF_READY"
 
     report_resp = client.get(f"/api/code-change/projects/demo/tasks/{task_id}/report")
     assert report_resp.status_code == 200
@@ -80,7 +80,7 @@ def test_code_change_router_runs_patch_task(tmp_path):
 
     metrics_resp = client.get("/api/code-change/metrics?project_id=demo")
     assert metrics_resp.status_code == 200
-    assert metrics_resp.json()["status_counts"]["PR_CREATED"] == 1
+    assert metrics_resp.json()["status_counts"]["HANDOFF_READY"] == 1
 
 
 def test_code_change_router_retries_failed_task(tmp_path):
@@ -95,14 +95,17 @@ def test_code_change_router_retries_failed_task(tmp_path):
     app.include_router(code_change.router)
     client = TestClient(app)
 
-    assert client.post(
-        "/api/code-change/projects",
-        json={
-            "name": "demo",
-            "repo_path": str(repo),
-            "test_command": "python3 -c \"print('tests ok')\"",
-        },
-    ).status_code == 200
+    assert (
+        client.post(
+            "/api/code-change/projects",
+            json={
+                "name": "demo",
+                "repo_path": str(repo),
+                "test_command": "python3 -c \"print('tests ok')\"",
+            },
+        ).status_code
+        == 200
+    )
 
     bad_patch = """diff --git a/app.py b/app.py
 --- a/app.py

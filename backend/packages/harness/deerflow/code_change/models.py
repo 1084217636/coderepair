@@ -11,10 +11,13 @@ class TaskStatus(StrEnum):
     QUEUED = "QUEUED"
     PLANNING = "PLANNING"
     RETRIEVING_CONTEXT = "RETRIEVING_CONTEXT"
+    PATCH_RECEIVED = "PATCH_RECEIVED"
+    VALIDATING_PATCH = "VALIDATING_PATCH"
     GENERATING_PATCH = "GENERATING_PATCH"
     APPLYING_PATCH = "APPLYING_PATCH"
     RUNNING_TESTS = "RUNNING_TESTS"
     REVIEWING = "REVIEWING"
+    HANDOFF_READY = "HANDOFF_READY"
     PR_CREATED = "PR_CREATED"
     FAILED = "FAILED"
     ROLLED_BACK = "ROLLED_BACK"
@@ -37,7 +40,7 @@ class Project:
         return asdict(self)
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "Project":
+    def from_dict(cls, data: dict[str, Any]) -> Project:
         return cls(**data)
 
 
@@ -143,7 +146,7 @@ class Task:
         return data
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "Task":
+    def from_dict(cls, data: dict[str, Any]) -> Task:
         data = dict(data)
         data["status"] = TaskStatus(data["status"])
         data["steps"] = [TaskStep(**item) for item in data.get("steps", [])]

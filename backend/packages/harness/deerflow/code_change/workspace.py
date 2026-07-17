@@ -1,11 +1,10 @@
 from __future__ import annotations
 
+import json
 import shutil
 import time
 from dataclasses import dataclass
-import json
 from pathlib import Path
-
 
 IGNORED_DIRS = {
     ".git",
