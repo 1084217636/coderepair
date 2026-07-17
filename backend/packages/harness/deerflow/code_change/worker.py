@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from uuid import uuid4
 
 from deerflow.code_change.context_retriever import retrieve_context
 from deerflow.code_change.models import Task, TaskStatus
@@ -30,6 +31,7 @@ def create_task(
         task_id=Path(task_dir).name,
         project_id=project.project_id,
         requirement=requirement,
+        owner_id=store.owner_id,
         artifact_dir=str(task_dir),
         created_at=now_iso(),
         updated_at=now_iso(),
@@ -104,15 +106,15 @@ def run_task_now(store: CodeChangeStore, project_name: str, requirement: str, pa
     return execute_task(store, task)
 
 
-def run_next_task(store: CodeChangeStore) -> Task | None:
-    for item in store.queued_items():
-        try:
-            task = store.get_task(item["project_id"], item["task_id"])
-        except KeyError:
-            continue
-        if task.status is TaskStatus.QUEUED:
-            return execute_task(store, task)
-    return None
+def run_next_task(store: CodeChangeStore, worker_id: str = "", lease_seconds: int = 300) -> Task | None:
+    resolved_worker_id = worker_id or f"worker-{uuid4().hex}"
+    task = store.claim_next_task(resolved_worker_id, lease_seconds=lease_seconds)
+    if task is None:
+        return None
+    try:
+        return execute_task(store, task)
+    finally:
+        store.release_task_claim(task, resolved_worker_id)
 
 
 def retry_task(store: CodeChangeStore, project_id: str, task_id: str) -> Task:

@@ -15,6 +15,8 @@ DeerFlow（**D**eep **E**xploration and **E**fficient **R**esearch **Flow**）�
 
 [Code Change Platform CI](https://github.com/1084217636/coderepair/actions/workflows/code-change-platform.yml?query=branch%3Aagent-code-change-platform) 会在每次推送到二开分支以及以该分支为目标的 PR 上运行定向 Ruff、`backend/tests/code_change` 和 import smoke；实际 workflow run 是测试数量与结果的事实来源。
 
+Code Change 控制面已按 owner 隔离项目、任务与队列；无鉴权模式继续使用兼容的 `default` 空间。仓库注册受 `CODE_CHANGE_ALLOWED_REPO_ROOTS` 白名单限制（多个目录使用操作系统路径分隔符），worker 使用带租约的原子 claim 文件领取任务，workspace 先复制到 staging 再发布，复制失败不会删除上一份完整工作区。
+
 https://github.com/user-attachments/assets/a8bcadc4-e040-4cf2-8fda-dd768b999c18
 
 > [!NOTE]

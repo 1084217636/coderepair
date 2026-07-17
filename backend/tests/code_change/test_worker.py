@@ -59,6 +59,42 @@ def test_worker_noops_when_queue_is_empty(tmp_path):
     assert run_next_task(store) is None
 
 
+def test_store_claims_queued_task_for_only_one_worker(tmp_path):
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    store = CodeChangeStore(tmp_path / "state")
+    store.create_project("demo", str(repo), f'{sys.executable} -c "print(1)"')
+    queued = create_task(store, "demo", "claim me", enqueue=True)
+
+    claimed = store.claim_next_task("worker-a", lease_seconds=60)
+
+    assert claimed is not None
+    assert claimed.task_id == queued.task_id
+    assert claimed.worker_id == "worker-a"
+    assert store.claim_next_task("worker-b", lease_seconds=60) is None
+
+    store.release_task_claim(claimed, "worker-a")
+    reclaimed = store.claim_next_task("worker-b", lease_seconds=60)
+    assert reclaimed is not None
+    assert reclaimed.worker_id == "worker-b"
+
+
+def test_expired_task_claim_can_be_recovered(tmp_path):
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    store = CodeChangeStore(tmp_path / "state")
+    store.create_project("demo", str(repo), f'{sys.executable} -c "print(1)"')
+    create_task(store, "demo", "recover me", enqueue=True)
+
+    first = store.claim_next_task("dead-worker", lease_seconds=0)
+    recovered = store.claim_next_task("healthy-worker", lease_seconds=60)
+
+    assert first is not None
+    assert recovered is not None
+    assert recovered.task_id == first.task_id
+    assert recovered.worker_id == "healthy-worker"
+
+
 def test_retry_failed_task_requeues_until_attempts_exhausted(tmp_path):
     repo = tmp_path / "repo"
     repo.mkdir()

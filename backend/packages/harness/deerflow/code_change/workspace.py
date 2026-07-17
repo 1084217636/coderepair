@@ -5,6 +5,7 @@ import shutil
 import time
 from dataclasses import dataclass
 from pathlib import Path
+from uuid import uuid4
 
 IGNORED_DIRS = {
     ".git",
@@ -35,10 +36,16 @@ def prepare_workspace(repo_path: str, artifact_dir: str | Path) -> Workspace:
         raise ValueError(f"repo_path does not exist or is not a directory: {repo_path}")
 
     workspace = Path(artifact_dir) / "workspace"
+    staging = Path(artifact_dir) / f".workspace-{uuid4().hex}.tmp"
+    start = time.monotonic()
+    try:
+        shutil.copytree(source, staging, ignore=_ignore_names)
+    except Exception:
+        shutil.rmtree(staging, ignore_errors=True)
+        raise
     if workspace.exists():
         shutil.rmtree(workspace)
-    start = time.monotonic()
-    shutil.copytree(source, workspace, ignore=_ignore_names)
+    staging.replace(workspace)
     file_count, total_bytes = _workspace_stats(workspace)
     manifest_path = Path(artifact_dir) / "workspace_manifest.json"
     manifest = {

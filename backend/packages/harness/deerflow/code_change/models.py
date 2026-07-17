@@ -29,6 +29,7 @@ class Project:
     name: str
     repo_path: str
     test_command: str
+    owner_id: str = "default"
     repo_url: str = ""
     default_branch: str = "main"
     tech_stack: list[str] = field(default_factory=list)
@@ -117,6 +118,7 @@ class Task:
     task_id: str
     project_id: str
     requirement: str
+    owner_id: str = "default"
     status: TaskStatus = TaskStatus.CREATED
     steps: list[TaskStep] = field(default_factory=list)
     contexts: list[RetrievedContext] = field(default_factory=list)
@@ -139,6 +141,8 @@ class Task:
     queued_at: str = ""
     started_at: str = ""
     finished_at: str = ""
+    worker_id: str = ""
+    lease_expires_at: str = ""
 
     def to_dict(self) -> dict[str, Any]:
         data = asdict(self)
@@ -163,8 +167,11 @@ def project_safe_name(name: str) -> str:
     return safe.strip("-_") or "project"
 
 
-def ensure_repo_path(path: str) -> str:
+def ensure_repo_path(path: str, allowed_roots: list[Path] | None = None) -> str:
     repo = Path(path).expanduser().resolve()
     if not repo.exists() or not repo.is_dir():
         raise ValueError(f"repo_path does not exist or is not a directory: {path}")
+    if allowed_roots and not any(repo == root or repo.is_relative_to(root) for root in allowed_roots):
+        roots = ", ".join(str(root) for root in allowed_roots)
+        raise ValueError(f"repo_path is outside allowed repository roots: {roots}")
     return str(repo)

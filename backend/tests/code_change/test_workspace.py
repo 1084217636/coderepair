@@ -1,5 +1,8 @@
 import json
 
+import pytest
+
+from deerflow.code_change import workspace as workspace_module
 from deerflow.code_change.workspace import prepare_workspace
 
 
@@ -25,3 +28,22 @@ def test_prepare_workspace_copies_repo_without_polluting_source(tmp_path):
     workspace_file.write_text("value = 'changed'\n", encoding="utf-8")
 
     assert (repo / "app.py").read_text(encoding="utf-8") == "value = 'source'\n"
+
+
+def test_prepare_workspace_keeps_previous_copy_when_refresh_fails(tmp_path, monkeypatch):
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / "app.py").write_text("version = 1\n", encoding="utf-8")
+    artifacts = tmp_path / "artifacts"
+    prepare_workspace(str(repo), artifacts)
+    (repo / "app.py").write_text("version = 2\n", encoding="utf-8")
+
+    def fail_copy(*args, **kwargs):
+        raise OSError("copy interrupted")
+
+    monkeypatch.setattr(workspace_module.shutil, "copytree", fail_copy)
+
+    with pytest.raises(OSError, match="copy interrupted"):
+        prepare_workspace(str(repo), artifacts)
+
+    assert (artifacts / "workspace" / "app.py").read_text(encoding="utf-8") == "version = 1\n"

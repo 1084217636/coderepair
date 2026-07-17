@@ -42,6 +42,8 @@ DeerFlow is a LangGraph-based AI super agent with sandbox execution, persistent 
 
 The `deerflow.code_change` package and `/api/code-change` Gateway router provide an isolated project/task workflow around repository patches. An externally supplied patch follows `PATCH_RECEIVED → VALIDATING_PATCH → APPLYING_PATCH → RUNNING_TESTS → REVIEWING → HANDOFF_READY`. `HANDOFF_READY` means review artifacts and a draft-PR handoff script exist; it does not claim that a remote PR was created. `PR_CREATED` is only a legal next state after an external GitHub operation confirms success.
 
+Gateway stores are scoped with `get_effective_user_id()` under `code-change/users/{owner}`; no-auth `default` keeps the legacy location. Set `CODE_CHANGE_ALLOWED_REPO_ROOTS` to an OS-path-separator-delimited allowlist before registering repositories. Queue workers use atomic `O_EXCL` claim files with expiring leases, and workspace copies are staged before replacement so interrupted copies never expose a partially refreshed workspace.
+
 Test commands run with `shell=False`, an executable allowlist, timeout, and log limits. The allowlist recognizes exact executables and controlled Python interpreter versions such as `python3.12` when their major alias (`python3`) is allowed; prefix lookalikes remain blocked.
 
 ### Lead Agent

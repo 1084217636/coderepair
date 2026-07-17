@@ -20,7 +20,9 @@ router = APIRouter(prefix="/api/code-change", tags=["code-change"])
 
 
 def get_code_change_store() -> CodeChangeStore:
-    return CodeChangeStore()
+    from deerflow.runtime.user_context import get_effective_user_id
+
+    return CodeChangeStore(owner_id=get_effective_user_id())
 
 
 class ProjectCreateRequest(BaseModel):

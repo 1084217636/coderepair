@@ -265,6 +265,9 @@ backend/tests/code_change/
 - API 默认只入队，由 Worker 执行长任务；`run_now` 仅用于本地演示。
 - 轻量仓库扫描和关键词 Top-K 文件召回。
 - 任务独立 local-copy workspace，Patch/Test 不直接修改源仓库。
+- Project/Task/Queue 按 owner 存储；Gateway 使用 DeerFlow 有效用户身份创建 store，无鉴权模式保留 `default` 兼容目录。
+- 仓库必须位于 `CODE_CHANGE_ALLOWED_REPO_ROOTS`；worker 通过带 lease 的原子 claim 文件领取任务，多个进程不会同时执行同一 QUEUED 任务。
+- workspace 先复制到 staging 再发布；复制中断时保留上一份完整 workspace，不向测试阶段暴露半成品目录。
 - Patch 路径防穿越，先 `git apply --check`，成功后再 `git apply`。
 - 外部 Patch 使用 `PATCH_RECEIVED -> VALIDATING_PATCH -> APPLYING_PATCH`，不会冒充模型生成行为。
 - 测试命令使用 `shell=False`，带可执行文件白名单、timeout 和日志截断；允许白名单 `python3` 对应的受控版本名（如虚拟环境 `python3.12`），拒绝前缀伪装。
@@ -274,7 +277,7 @@ backend/tests/code_change/
 
 ### 5.2 当前尚未完成或不能夸大
 
-1. 当前 `code_change` 是挂在 DeerFlow 包和 Gateway 下的独立确定性工作流，尚未注册成 Lead Agent Tool/Skill，也没有进入原生 Thread/Run 事件流。
+1. 当前 `code_change` 是挂在 DeerFlow 包和 Gateway 下的独立、owner 隔离的确定性工作流，尚未注册成 Lead Agent Tool/Skill，也没有进入原生 Thread/Run 事件流。
 2. Worker 不调用 LLM 生成代码。当前 Patch 由 API/CLI 的 `patch_text/patch_file` 提供，并明确记录为 `PATCH_RECEIVED`；`GENERATING_PATCH` 只为未来真实 Agent 生成路径保留。
 3. `local-copy` 只避免修改源仓库，不限制 CPU、内存、网络和系统调用，不等于 DeerFlow Container Sandbox。
 4. `task_queue.jsonl` 是 append-only 单机队列，没有多 Worker 原子抢占、lease、heartbeat、backoff 和 DLQ。
@@ -452,7 +455,7 @@ PR_CREATED 必须保存真实 provider、repo、PR number 和 URL。
 
 - `compileall` 通过。
 - code_change pytest 全部通过；若环境缺少 pytest，必须明确记录“未执行”，不能写“通过”。
-- 2026-07-17 本地实测：`backend/tests/code_change` 为 `22 passed`；锁文件对应的 Ruff 0.15.12 对 code_change 包、测试和 Router 共 25 个文件执行 `check` 与 `format --check` 通过；新增 workflow 通过 actionlint 1.7.12。测试环境另报告 1 条 Starlette/httpx 弃用警告，不影响用例结果。远端 GitHub Actions 尚未推送运行，不得提前称 CI 已绿。
+- 2026-07-17 本地实测：加入 owner 隔离、仓库根目录白名单、原子 claim/lease 与 workspace staging 后，`backend/tests/code_change` 为 `27 passed`；Ruff 对 code_change 包、测试和 Router 执行 `check` 与 `format --check` 通过；workflow 通过 actionlint。测试环境另报告 1 条 Starlette/httpx 弃用警告，不影响用例结果。远端 GitHub Actions 尚未推送运行，不得提前称 CI 已绿。
 - API 能创建 Project、入队 Task、查询状态、report、timeline、metrics 和 retry。
 - Patch 在 local-copy workspace 应用，源仓库保持不变。
 - 非法 Patch 路径和非白名单命令被拒绝。

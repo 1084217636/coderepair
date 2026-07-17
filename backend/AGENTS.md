@@ -72,6 +72,8 @@ The local `deerflow.code_change` control plane treats externally supplied and mo
 
 The extension branch is guarded by `.github/workflows/code-change-platform.yml`. Keep its targeted Ruff paths, `tests/code_change` pytest run, and import smoke aligned when adding files to the control plane. Validate the same commands locally before pushing; do not report the workflow as green until a real GitHub Actions run exists.
 
+The code-change store is owner-scoped. Gateway constructs it from `get_effective_user_id()`; the no-auth `default` owner deliberately retains the legacy directory layout, while authenticated owners live under `code-change/users/{owner}`. Repository paths must resolve beneath `CODE_CHANGE_ALLOWED_REPO_ROOTS` (split with `os.pathsep`). Queue workers must use the store's atomic claim/lease API instead of scanning and executing a QUEUED task directly. Workspace refreshes must stage a complete copy before replacing `workspace`; preserve the previous workspace when staging fails.
+
 ### Documentation Update Policy
 **CRITICAL: Always update README.md and AGENTS.md after every code change**
 
