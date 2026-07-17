@@ -66,6 +66,12 @@ deer-flow/
 
 ## Important Development Guidelines
 
+### Code-change workflow invariants
+
+The local `deerflow.code_change` control plane treats externally supplied and model-generated patches as different events. External input must use `PATCH_RECEIVED → VALIDATING_PATCH`; reserve `GENERATING_PATCH` for a real generation step. A successful local patch/test run ends at `HANDOFF_READY`, because the worker only writes review artifacts and `create_draft_pr.sh`. Enter `PR_CREATED` only after an external GitHub operation returns a real PR identity. Test executable validation may normalize a dotted Python version (`python3.12`) to its allowlisted major alias (`python3`), but must reject arbitrary prefix matches.
+
+The extension branch is guarded by `.github/workflows/code-change-platform.yml`. Keep its targeted Ruff paths, `tests/code_change` pytest run, and import smoke aligned when adding files to the control plane. Validate the same commands locally before pushing; do not report the workflow as green until a real GitHub Actions run exists.
+
 ### Documentation Update Policy
 **CRITICAL: Always update README.md and AGENTS.md after every code change**
 

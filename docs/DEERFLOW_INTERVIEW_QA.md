@@ -59,11 +59,12 @@ backend/app/gateway/routers/code_change.py
 CREATED
 PLANNING
 RETRIEVING_CONTEXT
-GENERATING_PATCH
+PATCH_RECEIVED
+VALIDATING_PATCH
 APPLYING_PATCH
 RUNNING_TESTS
 REVIEWING
-PR_CREATED / FAILED
+HANDOFF_READY / FAILED
 ```
 
 这样面试时可以讲清楚：Agent 不是黑盒输出，而是每一步都有状态、产物和失败记录。
@@ -240,7 +241,7 @@ QUEUED
   ↓
 worker run-once
   ↓
-PR_CREATED / FAILED
+HANDOFF_READY / FAILED
 ```
 
 每个任务会记录：

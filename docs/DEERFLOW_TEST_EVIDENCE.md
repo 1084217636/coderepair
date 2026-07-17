@@ -149,7 +149,7 @@ PYTHONPATH=backend/packages/harness python3 -m deerflow.code_change.cli --home "
 结果：
 
 ```text
-task=<task_id> status=PR_CREATED
+task=<task_id> status=HANDOFF_READY
 test_log=tests ok
 ```
 
@@ -217,7 +217,7 @@ API smoke 结果：
 
 ```text
 create_status= 200
-task_status= 200 PR_CREATED
+task_status= 200 HANDOFF_READY
 report_status= 200
 pr_status= 200
 timeline_events= 2
@@ -273,7 +273,7 @@ CLI queue/worker smoke：
 
 ```text
 task=<task_id> status=QUEUED
-task=<task_id> status=PR_CREATED
+task=<task_id> status=HANDOFF_READY
 queue_exists=True
 pr_body_exists=True
 test_log=tests ok
@@ -519,7 +519,7 @@ git diff --check 通过。
 CLI demo smoke：
 
 ```text
-Demo A：成功 patch -> worker run-once -> status=PR_CREATED，生成 13 个 task artifact。
+Demo A：成功 patch -> worker run-once -> status=HANDOFF_READY，生成 task review artifacts。
 Demo B：错误 patch -> worker run-once -> status=FAILED，metrics 显示 failed_count=1、retryable_failed_count=1、attempts_total=1。
 ```
 

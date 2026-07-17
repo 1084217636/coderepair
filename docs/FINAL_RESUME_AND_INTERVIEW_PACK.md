@@ -24,7 +24,7 @@ Python / FastAPI / Pydantic / pytest / Git diff / DeerFlow / Agent Workflow / RA
 
 ```text
 - 基于 DeerFlow Agent harness 二次开发项目级 AI 代码变更平台，设计 project/task/timeline/audit 数据模型，将一次代码修改拆分为上下文召回、Patch 应用、测试验证、报告生成和 PR handoff 等可审计阶段。
-- 实现代码变更任务状态机和 Worker 执行流，支持 QUEUED、PLANNING、RETRIEVING_CONTEXT、APPLYING_PATCH、RUNNING_TESTS、PR_CREATED、FAILED 等状态，并通过 JSONL 队列解耦 API 请求与长耗时测试执行。
+- 实现代码变更任务状态机和 Worker 执行流，支持 `QUEUED、PLANNING、RETRIEVING_CONTEXT、PATCH_RECEIVED、VALIDATING_PATCH、APPLYING_PATCH、RUNNING_TESTS、HANDOFF_READY、FAILED` 等状态，并通过 JSONL 队列解耦 API 请求与长耗时测试执行。
 - 构建轻量代码仓库 RAG 流程，通过仓库扫描、文件摘要和关键词 Top-K 召回定位相关代码，为后续升级符号索引、BM25 和 embedding 检索预留扩展点。
 - 引入 workspace 隔离执行和 sandbox policy，避免 AI Patch 直接污染主仓库；测试命令使用 shell=False、命令白名单、超时和日志截断，提升执行边界和审计能力。
 - 实现失败任务 retry、worker metrics、task_report、audit.json、pr_body.md、pr_handoff.json 和 draft PR 脚本生成，让代码变更从需求到人工审核材料形成完整闭环。
@@ -85,7 +85,7 @@ Cursor / Copilot 偏个人 IDE 辅助，我做的是企业研发流程里的代�
 ### Q5：为什么要有状态机？
 
 ```text
-状态机让 Agent 执行过程从黑盒变成可观察流程。比如 PLANNING、RETRIEVING_CONTEXT、APPLYING_PATCH、RUNNING_TESTS、PR_CREATED、FAILED，每个阶段都能保存产物和错误，便于前端展示、失败重试和审计复盘。
+状态机让 Agent 执行过程从黑盒变成可观察流程。比如 `PLANNING、RETRIEVING_CONTEXT、PATCH_RECEIVED、VALIDATING_PATCH、APPLYING_PATCH、RUNNING_TESTS、HANDOFF_READY、FAILED`，每个阶段都能保存产物和错误，便于前端展示、失败重试和审计复盘。`PR_CREATED` 只有真实 GitHub 操作成功后才能写入。
 ```
 
 ### Q6：为什么 V4 引入 Worker？

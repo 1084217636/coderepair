@@ -79,7 +79,7 @@ PYTHONPATH=backend/packages/harness python3 -m deerflow.code_change.cli --home "
 预期输出：
 
 ```text
-task=<task_id> status=PR_CREATED artifacts=<artifact_dir>
+task=<task_id> status=HANDOFF_READY artifacts=<artifact_dir>
 ```
 
 重点检查产物：
@@ -223,4 +223,4 @@ pr_handoff.json         创建 PR 需要的结构化信息
 create_draft_pr.sh      人工审核后执行的 draft PR 脚本
 ```
 
-不要只展示终端一行 `PR_CREATED`，要展示这些 artifact。它们才是项目不像玩具的关键。
+不要只展示终端一行 `HANDOFF_READY`，要展示这些 artifact，并明确远端 PR 尚未创建。它们才是项目不像玩具的关键。

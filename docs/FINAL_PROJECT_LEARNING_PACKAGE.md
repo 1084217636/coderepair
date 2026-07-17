@@ -121,7 +121,7 @@ pr_handoff 写 pr_handoff.json / create_draft_pr.sh
 最终状态不是简单的 `SUCCESS`，而是更贴近研发流程的：
 
 ```text
-PR_CREATED
+HANDOFF_READY
 ```
 
 它表示这次变更已经通过测试并生成可审核的 PR 交付材料。

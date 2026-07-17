@@ -35,11 +35,11 @@ Repo Scan
   ↓
 Context Retrieve
   ↓
-Apply Patch
+PATCH_RECEIVED / VALIDATING_PATCH / Apply Patch
   ↓
 Run Tests
   ↓
-PR Draft
+PR Handoff
   ↓
 Task Report
   ↓
@@ -63,6 +63,7 @@ Timeline / Audit
 | `pr_handoff.py` | 生成 `pr_handoff.json` 和 `create_draft_pr.sh` |
 | `report_writer.py` | 生成 `task_report.md`、patch 摘要和 `audit.json` |
 | `cli.py` | 命令行入口：project create/list/status、task run |
+| `.github/workflows/code-change-platform.yml` | 二开分支专属 CI：定向 Ruff、code_change pytest、Gateway/package import smoke |
 
 ## 4. 当前 CLI 链路
 
@@ -87,7 +88,7 @@ RETRIEVING_CONTEXT
   ↓
 retrieve_context
   ↓
-GENERATING_PATCH / APPLYING_PATCH（带 --patch-file 时）
+PATCH_RECEIVED / VALIDATING_PATCH / APPLYING_PATCH（带 --patch-file 时）
   ↓
 apply_patch_file
   ↓
@@ -99,7 +100,7 @@ REVIEWING
   ↓
 write_pr_body（带 patch 且测试通过时）
   ↓
-PR_CREATED / FAILED
+HANDOFF_READY / FAILED
   ↓
 write_reports
   ↓
@@ -115,7 +116,7 @@ python -m deerflow.code_change.cli worker run-once
   ↓
 run_next_task
   ↓
-PR_CREATED / FAILED
+HANDOFF_READY / FAILED
 ```
 
 ## 5. 当前产物结构

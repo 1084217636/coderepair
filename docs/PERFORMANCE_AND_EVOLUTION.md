@@ -99,7 +99,7 @@ worker run-once 消费一个 QUEUED 任务
   ↓
 执行 scan / patch / test / report
   ↓
-任务状态更新为 PR_CREATED 或 FAILED
+任务状态更新为 HANDOFF_READY 或 FAILED
 ```
 
 相比 V3 的改进：

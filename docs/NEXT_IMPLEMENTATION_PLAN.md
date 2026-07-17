@@ -204,11 +204,12 @@ pr_body.md
 CREATED
 PLANNING
 RETRIEVING_CONTEXT
-GENERATING_PATCH
+PATCH_RECEIVED
+VALIDATING_PATCH
 APPLYING_PATCH
 RUNNING_TESTS
 REVIEWING
-PR_CREATED
+HANDOFF_READY
 FAILED
 ROLLED_BACK
 ```
@@ -360,8 +361,8 @@ V8 已落地：
 
 ```text
 1. 新增 pr_handoff.py。
-2. PR_CREATED 时生成 pr_handoff.json。
-3. PR_CREATED 时生成 create_draft_pr.sh。
+2. HANDOFF_READY 时生成 pr_handoff.json。
+3. HANDOFF_READY 时生成 create_draft_pr.sh。
 4. Task 新增 pr_handoff_path / pr_create_script_path。
 5. Router/CLI 返回 task 时能看到 PR handoff 产物路径。
 6. 测试覆盖 gh pr create --draft 命令生成。

@@ -11,6 +11,10 @@
 
 DeerFlow（**D**eep **E**xploration and **E**fficient **R**esearch **Flow**）是一个开源的 **super agent harness**。它把 **sub-agents**、**memory** 和 **sandbox** 组织在一起，再配合可扩展的 **skills**，让 agent 可以完成几乎任何事情。
 
+本仓库包含一个项目级 AI 代码变更任务流二开。外部 Patch 会经过 `PATCH_RECEIVED → VALIDATING_PATCH → APPLYING_PATCH`，测试与审核材料生成成功后停在 `HANDOFF_READY`；只有未来真实 GitHub 调用成功后才能进入 `PR_CREATED`。测试命令白名单支持受控的虚拟环境 `python3.12` 等版本化解释器名。需要了解“DeerFlow 原架构、二开动机、个人实现与上游能力边界、最终设计框架、简历和面试准备”时，统一阅读 [docs/AI_HANDOFF_DEERFLOW_FINAL.md](docs/AI_HANDOFF_DEERFLOW_FINAL.md)。
+
+[Code Change Platform CI](https://github.com/1084217636/coderepair/actions/workflows/code-change-platform.yml?query=branch%3Aagent-code-change-platform) 会在每次推送到二开分支以及以该分支为目标的 PR 上运行定向 Ruff、`backend/tests/code_change` 和 import smoke；实际 workflow run 是测试数量与结果的事实来源。
+
 https://github.com/user-attachments/assets/a8bcadc4-e040-4cf2-8fda-dd768b999c18
 
 > [!NOTE]
