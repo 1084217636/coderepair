@@ -569,5 +569,21 @@ YAML 解析通过。
 
 ```text
 uv / pytest / langchain-deepseek 当前机器未安装，无法直接执行 backend/tests/test_patched_deepseek.py。
+
+## 最终固定评测：code-change-fixed-v1
+
+2026-07-21 使用 `deerflow.code_change.evaluation` 执行 20 个固定外部 Patch 任务：10 个成功、4 个上下文不匹配、3 个越界路径、3 个测试失败。
+
+```text
+task_count=20
+patch_apply_rate=65.00%
+test_pass_rate=50.00%
+task_success_rate=50.00%
+unsafe_patch_block_rate=100.00%
+mean_duration_seconds≈0.012（随机器波动）
+human_acceptance_rate=not measured
+```
+
+这些比例由用例构成决定，用于验证状态分类和安全边界，不是模型能力排行榜。当前链路接收外部 unified diff，因此不报告检索 Recall@5、token 成本或自主生成成功率；人工接受率必须积累真实 reviewer 决策后才能计算。
 这不是业务测试失败，而是本地 Python 依赖环境未初始化。
 ```

@@ -241,7 +241,7 @@ git diff --check 验证提交前没有空白字符问题。
 
 ```text
 1. 存储仍是 JSON 文件，不是 PostgreSQL。
-2. 队列仍是 JSONL，不支持多 worker 抢占和 lease。
+2. 队列日志仍是 JSONL，但 worker 已通过原子 claim 文件、lease 和过期回收避免同一任务被并发执行；它还不是 Redis/Kafka 级分布式队列。
 3. sandbox policy 不是 Docker 级隔离。
 4. RAG 是轻量关键词召回，不是完整符号索引和 embedding。
 5. PR handoff 生成脚本，不自动调用 GitHub API。
@@ -252,7 +252,7 @@ git diff --check 验证提交前没有空白字符问题。
 ```text
 1. JSON 文件迁移到 PostgreSQL。
 2. task_queue.jsonl 迁移到 Redis Stream 或数据库队列。
-3. 增加 lease / heartbeat / backoff / dead-letter queue。
+3. 在现有 claim/lease 基础上继续增加执行中 heartbeat、自动 backoff 和 dead-letter queue。
 4. 接 Docker 或 DeerFlow sandbox，限制 CPU、内存、网络和文件系统。
 5. 代码索引升级为 symbol index + BM25 / embedding。
 6. metrics 接 Prometheus / Grafana。

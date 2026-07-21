@@ -76,6 +76,8 @@ The code-change store is owner-scoped. Gateway constructs it from `get_effective
 
 `HANDOFF_READY` is not approval. Human review must call `deerflow.code_change.review.review_task`, persist `human_review.json`, and transition to `APPROVED` or `CHANGES_REQUESTED`. Only `APPROVED → PR_CREATED` is legal, and `PR_CREATED` still requires a real external GitHub success response. Do not describe the current external-patch workflow as autonomous model patch generation.
 
+The deterministic release gate is `deerflow.code_change.evaluation`: exactly 20 fixed external-patch cases covering success, invalid context, path traversal, and test failure. Keep unmeasured fields such as human acceptance as `None`; do not infer LLM retrieval, token, or generation metrics from this suite.
+
 ### Documentation Update Policy
 **CRITICAL: Always update README.md and AGENTS.md after every code change**
 
