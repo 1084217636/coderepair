@@ -1,5 +1,7 @@
 # Autumn Recruit Study Guide
 
+> 统一回答方式：先按公司多服务器目标架构讲 API 集群、Worker 集群、共享数据库/队列和独立沙箱，再说明当前仓库的文件型 MVP 边界。先读 `README_STUDY.md` 和 `COMPANY_DEPLOYMENT_AND_INTERVIEW.md`，避免把本地 Worker 讲成生产分布式平台。
+
 这个项目按 AI 工程 / 研发效能平台项目准备。学习重点不是“大模型会写代码”，而是任务流、上下文、隔离执行、测试闭环和审计。
 
 ## 第一阶段：先理解平台闭环
