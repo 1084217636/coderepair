@@ -13,6 +13,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel, Field
 
+from deerflow.code_change.review import review_task
 from deerflow.code_change.store import CodeChangeStore
 from deerflow.code_change.worker import create_task, retry_task, run_next_task, run_task_now
 
@@ -37,6 +38,11 @@ class TaskRunRequest(BaseModel):
     requirement: str = Field(..., min_length=1)
     patch_text: str = Field(default="", description="Unified diff content to apply before running tests")
     run_now: bool = Field(default=False, description="Run synchronously for local demos; default enqueues for worker execution")
+
+
+class TaskReviewRequest(BaseModel):
+    decision: str = Field(..., pattern="^(approve|request_changes)$")
+    note: str = Field(default="", max_length=2000)
 
 
 @router.post("/projects", summary="Create Code Change Project")
@@ -114,6 +120,22 @@ def get_project_task(project_id: str, task_id: str, store: CodeChangeStore = Dep
 def retry_project_task(project_id: str, task_id: str, store: CodeChangeStore = Depends(get_code_change_store)) -> dict:
     try:
         task = retry_task(store, project_id, task_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return task.to_dict()
+
+
+@router.post("/projects/{project_id}/tasks/{task_id}/review", summary="Review Code Change Handoff")
+def review_project_task(
+    project_id: str,
+    task_id: str,
+    request: TaskReviewRequest,
+    store: CodeChangeStore = Depends(get_code_change_store),
+) -> dict:
+    try:
+        task = review_task(store, project_id, task_id, store.owner_id, request.decision, request.note)
     except KeyError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:

@@ -74,13 +74,22 @@ def test_code_change_router_runs_patch_task(tmp_path):
     assert pr_resp.status_code == 200
     assert "Result: `PASS`" in pr_resp.text
 
+    approval_resp = client.post(
+        f"/api/code-change/projects/demo/tasks/{task_id}/review",
+        json={"decision": "approve", "note": "patch and tests reviewed"},
+    )
+    assert approval_resp.status_code == 200
+    assert approval_resp.json()["status"] == "APPROVED"
+    assert approval_resp.json()["approved_by"] == "default"
+    assert Path(approval_resp.json()["approval_path"]).exists()
+
     timeline_resp = client.get("/api/code-change/projects/demo/timeline")
     assert timeline_resp.status_code == 200
     assert len(timeline_resp.json()["events"]) >= 2
 
     metrics_resp = client.get("/api/code-change/metrics?project_id=demo")
     assert metrics_resp.status_code == 200
-    assert metrics_resp.json()["status_counts"]["HANDOFF_READY"] == 1
+    assert metrics_resp.json()["status_counts"]["APPROVED"] == 1
 
 
 def test_code_change_router_retries_failed_task(tmp_path):

@@ -9,7 +9,7 @@
 ```text
 1. DeerFlow 项目结构：backend/app/gateway、backend/packages/harness/deerflow。
 2. FastAPI：router、request/response schema、dependency override、TestClient。
-3. 任务状态机：`CREATED、QUEUED、PLANNING、RETRIEVING_CONTEXT、PATCH_RECEIVED、VALIDATING_PATCH、APPLYING_PATCH、RUNNING_TESTS、REVIEWING、HANDOFF_READY、FAILED`；`PR_CREATED` 只表示真实远端 PR 已创建。
+3. 任务状态机：`CREATED、QUEUED、PLANNING、RETRIEVING_CONTEXT、PATCH_RECEIVED、VALIDATING_PATCH、APPLYING_PATCH、RUNNING_TESTS、REVIEWING、HANDOFF_READY、APPROVED/CHANGES_REQUESTED、FAILED`；只有人工批准后才能进入 `APPROVED`，`PR_CREATED` 只表示真实远端 PR 已创建。
 4. 文件型存储：project.json、task.json、timeline.jsonl、audit.json。
 ```
 

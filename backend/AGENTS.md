@@ -74,6 +74,8 @@ The extension branch is guarded by `.github/workflows/code-change-platform.yml`.
 
 The code-change store is owner-scoped. Gateway constructs it from `get_effective_user_id()`; the no-auth `default` owner deliberately retains the legacy directory layout, while authenticated owners live under `code-change/users/{owner}`. Repository paths must resolve beneath `CODE_CHANGE_ALLOWED_REPO_ROOTS` (split with `os.pathsep`). Queue workers must use the store's atomic claim/lease API instead of scanning and executing a QUEUED task directly. Workspace refreshes must stage a complete copy before replacing `workspace`; preserve the previous workspace when staging fails.
 
+`HANDOFF_READY` is not approval. Human review must call `deerflow.code_change.review.review_task`, persist `human_review.json`, and transition to `APPROVED` or `CHANGES_REQUESTED`. Only `APPROVED → PR_CREATED` is legal, and `PR_CREATED` still requires a real external GitHub success response. Do not describe the current external-patch workflow as autonomous model patch generation.
+
 ### Documentation Update Policy
 **CRITICAL: Always update README.md and AGENTS.md after every code change**
 

@@ -101,6 +101,8 @@ REVIEWING
 write_pr_body（带 patch 且测试通过时）
   ↓
 HANDOFF_READY / FAILED
+
+人工审核通过后：`APPROVED`；要求修改则：`CHANGES_REQUESTED`。只有 `APPROVED` 才允许在 GitHub 返回真实 PR 标识后进入 `PR_CREATED`，审核记录保存在任务目录的 `human_review.json`。
   ↓
 write_reports
   ↓

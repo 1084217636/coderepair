@@ -33,9 +33,17 @@ def test_state_machine_allows_ordered_progression():
 def test_state_machine_reserves_pr_created_for_external_success():
     task = Task(task_id="t1", project_id="demo", requirement="run tests", status=TaskStatus.HANDOFF_READY)
 
+    transition(task, TaskStatus.APPROVED, "Human approved review artifacts")
     transition(task, TaskStatus.PR_CREATED, "GitHub confirmed draft PR creation")
 
     assert task.status == TaskStatus.PR_CREATED
+
+
+def test_state_machine_requires_approval_before_pr_created():
+    task = Task(task_id="t1", project_id="demo", requirement="run tests", status=TaskStatus.HANDOFF_READY)
+
+    with pytest.raises(InvalidTransition):
+        transition(task, TaskStatus.PR_CREATED)
 
 
 def test_state_machine_rejects_skipped_stage():
