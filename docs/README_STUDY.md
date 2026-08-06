@@ -1,20 +1,26 @@
-# DeerFlow 二开项目学习入口
+# CodeRepair 学习入口
 
-这套资料已经覆盖项目定位、DeerFlow 原结构、二开动机、代码地图、任务状态机、Worker、Patch/Test、沙箱、RAG、PR handoff、测试证据、简历表达和面试题。
+CodeRepair 的主学习资料在 [`handbook/README.md`](handbook/README.md)。手册按 00 到 20 编号，假设你只会 Python 基本语法。第一次学习时，按编号顺序读，不需要同时翻旧版总结文档。
 
-## 建议顺序
+每一章都包含两块固定内容：
 
-1. `FINAL_PROJECT_LEARNING_PACKAGE.md`：先背完整项目闭环。
-2. `COMPANY_DEPLOYMENT_AND_INTERVIEW.md`：建立公司多服务器部署口径，并分清已实现与演进设计。
-3. `DEERFLOW_CODE_MAP.md`：理解 DeerFlow 原结构和二开位置。
-4. `CODE_CHANGE_SUMMARY_BY_FILE.md`：掌握自己新增的文件与职责。
-5. `DEERFLOW_MODULE_CARDS.md`：按模块复习。
-6. `FINAL_DEMO_CASES.md`、`DEERFLOW_TEST_EVIDENCE.md`：掌握证据。
-7. `FINAL_RESUME_AND_INTERVIEW_PACK.md`、`DEERFLOW_INTERVIEW_QA.md`：背简历和追问。
-8. `PERFORMANCE_AND_EVOLUTION.md`：学习生产化演进。
+1. “本章源码阅读任务”会写明类、函数、字段、阅读顺序和验收标准。
+2. “本章自测题与参考答案”把答案放在同一个文件里。先遮住答案口述，再逐题核对。
 
-## 统一口径
+## 三遍学习法
 
-面试时先讲公司目标架构：多 API Gateway、多 Worker、共享 PostgreSQL/任务队列、对象存储、短生命周期容器沙箱。随后必须主动说明当前仓库真实版本使用 JSON/JSONL 持久化、原子 claim/lease 和本地隔离 workspace，目标架构中的 PostgreSQL、Redis Stream、Docker/K8s Sandbox 尚未全部实现。
+第一遍读 00 到 06。目标是能用自己的话回答：DeerFlow 上游有什么，个人二开增加了什么，为什么代码变更不能只靠一段 prompt。
 
-“公司场景作为默认思考方式”不等于把未来设计冒充当前代码。面试回答固定分三层：当前实现、为什么这样设计、生产环境怎样演进。
+第二遍读 07 到 17。目标是能从 HTTP 请求讲到 Task、Queue、Worker、Workspace、Patch、测试、报告和审批，并能解释故障恢复。
+
+第三遍读 18 到 20。目标是记住具体类、字段和函数，完成简历口径、模拟面试与闭卷验收。
+
+## 当前实现的统一口径
+
+学习时始终分清三层：
+
+- 上游 DeerFlow：通用 Agent、Tool、Skill、Middleware、Thread/Run、Memory、SandboxProvider 和工作台。
+- 当前个人二开：owner 隔离的 Project/Task、文件 Store、本地 JSONL 队列、claim/lease/heartbeat/fencing，以及外部 Patch 和 Agent Patch 两种模式共享的 Workspace/Test/Report/Review 主链。Agent 只拿搜索、读文件和 typed submit 三个 Tool。
+- 目标架构：将文件 Store、JSONL 队列和宿主机 subprocess 分别替换为 PostgreSQL、可靠队列和短生命周期容器 Sandbox，并补在线模型固定任务评测与真实 GitHub Provider。
+
+当前 `local-copy` 只保护登记仓库不被直接修改，不是容器沙箱。`PR handoff` 只生成交接材料和脚本，不代表 GitHub 已经创建 PR。学习和面试都按代码与测试证据回答，不把目标架构说成当前能力。

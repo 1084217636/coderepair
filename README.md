@@ -1,16 +1,62 @@
+# CodeRepair
+
+CodeRepair 是我基于 DeerFlow 2.0 二次开发的受控代码变更平台。上游 DeerFlow 提供通用 Agent、Tool、Middleware、Thread/Run 和 SandboxProvider；个人二开位于 `backend/packages/harness/deerflow/code_change/`、Code Change Gateway Router 与 `/workspace/code-change` 前端控制台。
+
+一次任务从已登记仓库和需求开始。系统支持两种候选 Patch 来源：
+
+- `external`：用户提交 unified diff，用于确定性演示和回归测试。
+- `agent`：DeerFlow Agent 只能搜索代码、按行读取文件并调用 typed `submit_patch` Tool，不能直接写真实仓库或执行 bash。
+
+两种模式随后进入同一套 Worker：固定 source commit，领取带 claim_id 的 lease，准备独立 Workspace，检查并应用 Patch，运行服务端测试模板，生成报告和 PR handoff，最后停在人工审批门禁。
+
+## 第一次学习
+
+学习本项目时只看 [CodeRepair / DeerFlow 二开学习手册](docs/handbook/README.md)，从第 00 章按编号读到第 20 章。`docs/handbook/` 是唯一学习主线；`docs/` 根目录的其他文档是设计记录、验证证据或历史材料，不能替代手册。
+
+## 个人二开的当前实现
+
+- Project、Task、状态机和 owner 目录隔离。
+- 外部 Patch 与最小权限 DeerFlow Patch Agent 两条入口。
+- 文件队列、claim_id、lease、heartbeat 和 stale writer fencing。
+- 固定 Git commit 的 local-copy Workspace、Patch 路径校验和服务端测试 profile。
+- Task timeline、测试报告、审计材料、人工 approve/request changes 和 PR handoff。
+- FastAPI 接口与 Next.js Code Change 控制台。
+- fake-model Agent 集成测试，以及 20 条外部 Patch 确定性评测。
+
+## 必须主动说明的边界
+
+- 当前 Store、Queue 和文件锁是单机 POSIX 实现，不是跨机器分布式队列。
+- 当前没有常驻 Worker 服务；控制台只入队和查询，内部调用方需使用专用 token 调用同步的 `worker/run-once` 端点。
+- `agent_thread_id` 和 `agent_run_id` 只是 Task 级关联标识，不是 Gateway 持久化 Thread/Run 记录，Agent graph 也没有配置 checkpointer。
+- `local-copy` 防止直接改脏源仓库，但宿主机测试进程不是强容器 Sandbox。
+- 轻量检索没有向量数据库、Embedding 或 Rerank。
+- PR handoff 只生成交接材料，没有调用 GitHub 创建真实 PR。
+- 20 条确定性评测不衡量在线模型成功率、token 成本或真实人工接受率。
+
+## 验证
+
+```bash
+cd backend
+PYTHONPATH=. uv run pytest tests/code_change -q
+uv run ruff check packages/harness/deerflow/code_change tests/code_change app/gateway/routers/code_change.py app/gateway/code_change_worker_auth.py app/gateway/auth_middleware.py app/gateway/csrf_middleware.py
+uv run ruff format --check packages/harness/deerflow/code_change tests/code_change app/gateway/routers/code_change.py app/gateway/code_change_worker_auth.py app/gateway/auth_middleware.py app/gateway/csrf_middleware.py
+PYTHONPATH=. uv run python -m deerflow.code_change.evaluation --output ../artifacts/code-change-evaluation
+
+cd ..
+python3 scripts/validate_code_change_handbook.py
+
+cd frontend
+pnpm check
+pnpm test
+```
+
+[![Code Change Platform CI](https://github.com/1084217636/coderepair/actions/workflows/code-change-platform.yml/badge.svg?branch=main)](https://github.com/1084217636/coderepair/actions/workflows/code-change-platform.yml?query=branch%3Amain)
+
+下面保留上游 DeerFlow 2.0 的原始说明。面试和简历中应把上游能力与个人二开分开。
+
+---
+
 # 🦌 DeerFlow - 2.0
-
-> Local fork goal: this repository is used as the base of `agent-code-change-platform`, an autumn-recruitment AI engineering project focused on project-based code change workflow, sandbox testing, diff explanation, and PR draft generation. The local MVP plan is documented in [docs/CODE_CHANGE_MVP_PLAN.md](docs/CODE_CHANGE_MVP_PLAN.md).
->
-> Local V5 extension: `backend/packages/harness/deerflow/code_change/` and `backend/app/gateway/routers/code_change.py` add a project-based code-change workflow with CLI + FastAPI APIs, task queue, worker execution, repository scanning, context retrieval, safe unified-diff patch application, test execution, PR handoff generation, timeline, report, and audit artifacts. External patches now move through `PATCH_RECEIVED → VALIDATING_PATCH → APPLYING_PATCH`; successful validation ends at `HANDOFF_READY`. `PR_CREATED` is reserved for a future real GitHub success response. Test commands accept exact allowlisted Python executables and controlled versioned names such as virtualenv `python3.12`. See [docs/DEERFLOW_CODE_MAP.md](docs/DEERFLOW_CODE_MAP.md), [docs/DEERFLOW_TEST_EVIDENCE.md](docs/DEERFLOW_TEST_EVIDENCE.md), and [docs/VERSION_TASK_TRACKER.csv](docs/VERSION_TASK_TRACKER.csv).
-
-> The code-change control plane is owner-scoped: authenticated users receive separate project/task/queue directories, while no-auth mode uses the backward-compatible `default` scope. Repository registration is restricted by `CODE_CHANGE_ALLOWED_REPO_ROOTS` (OS-path-separator list). Workers claim queued tasks through an atomic claim file with a lease, and workspace refreshes copy to staging before publishing the complete directory, so a failed copy does not destroy the last valid workspace.
-
-> Human review is now an explicit gate after `HANDOFF_READY`. `POST /api/code-change/projects/{project_id}/tasks/{task_id}/review` records `approve` or `request_changes` in `human_review.json`; only `APPROVED` tasks may later transition to `PR_CREATED` after GitHub returns a real PR identity. This extension still accepts an external unified diff and does not claim autonomous model patch generation.
-
-> Run the 20-case deterministic benchmark with `cd backend && PYTHONPATH=. uv run python -m deerflow.code_change.evaluation --output ../artifacts/code-change-evaluation`. It reports patch apply, test pass, task success, unsafe-path blocking, and duration. Human acceptance remains unmeasured until real reviewers use the approval endpoint; retrieval recall, token cost, and autonomous generation are outside this external-patch suite.
->
-> [![Code Change Platform CI](https://github.com/1084217636/coderepair/actions/workflows/code-change-platform.yml/badge.svg?branch=agent-code-change-platform)](https://github.com/1084217636/coderepair/actions/workflows/code-change-platform.yml?query=branch%3Aagent-code-change-platform) The dedicated workflow runs targeted Ruff checks, `backend/tests/code_change`, and a Gateway/package import smoke test on every push to the extension branch and on pull requests targeting it. The workflow run is the source of truth for the current test count.
 
 English | [中文](./README_zh.md) | [日本語](./README_ja.md) | [Français](./README_fr.md) | [Русский](./README_ru.md)
 
