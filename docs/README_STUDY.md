@@ -1,6 +1,6 @@
 # CodeRepair 学习入口
 
-CodeRepair 的主学习资料在 [`handbook/README.md`](handbook/README.md)。手册按 00 到 20 编号，先补 LLM 与 Agent 工程基础，再进入 DeerFlow Runtime、受限 Coding Agent、Anchored Branch Context、安全评测与面试。第一次学习时只按这一套顺序读。
+CodeRepair 的主学习资料在 [`handbook/README.md`](handbook/README.md)。手册按 00 到 21 编号，先补 LLM 与 Agent 工程基础，再进入 DeerFlow Runtime、受限 Coding Agent、Anchored Branch Context、安全评测、真实故障与面试。第一次学习时只按这一套顺序读。
 
 每一章都包含两块固定内容：
 
@@ -15,7 +15,7 @@ CodeRepair 的主学习资料在 [`handbook/README.md`](handbook/README.md)。�
 
 第三遍读 10 到 15。目标是走通检索、Patch Agent、Workspace/Test、Anchored Branch、Context 与 Decision/HITL。
 
-第四遍读 16 到 20。目标是完成安全威胁模型、Agent eval、故障排查、源码地图和六周面试验收。
+第四遍读 16 到 21。目标是完成安全威胁模型、Agent eval、故障排查、源码地图、六周面试验收和三篇真实开发复盘。
 
 ## 当前实现的统一口径
 

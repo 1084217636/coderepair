@@ -127,6 +127,7 @@ def main() -> int:
         "18_FAILURE_DEBUGGING.md",
         "19_END_TO_END_CODE_MAP.md",
         "20_RESUME_STUDY_PLAN.md",
+        "21_AI_ASSISTED_AGENT_DEVELOPMENT.md",
     }
 
     actual_names = {path.name for path in chapters}

@@ -23,7 +23,7 @@ DeerFlow 的 Thread、Run、Checkpoint、Agent、Tool、Sandbox 和 SSE 是上�
 
 ## 第一次学习
 
-学习本项目时只看 [CodeRepair AI 工程与 Agent 开发学习手册](docs/handbook/README.md)，从第 00 章按编号读到第 20 章。它先补 LLM/Agent 基础，再进入项目实现、安全评测和面试；其他 docs 不构成第二套顺序。
+学习本项目时只看 [CodeRepair AI 工程与 Agent 开发学习手册](docs/handbook/README.md)，从第 00 章按编号读到第 21 章。它先补 LLM/Agent 基础，再进入项目实现、安全评测、真实开发故障和面试；其他 docs 不构成第二套顺序。
 
 ## 个人二开的当前实现
 
