@@ -6,6 +6,7 @@ import every router and its optional runtime dependencies.
 
 __all__ = [
     "agents",
+    "anchored_branch",
     "artifacts",
     "assistants_compat",
     "auth",

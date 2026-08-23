@@ -1,16 +1,12 @@
 import json
-import subprocess
 import sys
 
 from deerflow.code_change.cli import run_task
 from deerflow.code_change.store import CodeChangeStore
 
 
-def test_pr_handoff_contains_review_commands(tmp_path):
-    repo = tmp_path / "repo"
-    repo.mkdir()
-    subprocess.run(["git", "init"], cwd=repo, check=True, stdout=subprocess.PIPE)
-    (repo / "app.py").write_text("def health():\n    return 'bad'\n", encoding="utf-8")
+def test_pr_handoff_contains_review_commands(tmp_path, committed_repo):
+    repo = committed_repo({"app.py": "def health():\n    return 'bad'\n"})
     patch = tmp_path / "fix.patch"
     patch.write_text(
         """diff --git a/app.py b/app.py
@@ -32,5 +28,8 @@ def test_pr_handoff_contains_review_commands(tmp_path):
     handoff = json.loads((tmp_path / "state" / "projects" / "demo" / "tasks" / task.task_id / "pr_handoff.json").read_text(encoding="utf-8"))
     assert handoff["branch_name"].startswith("ai-code-change/")
     assert handoff["base_branch"] == "main"
+    assert handoff["source_commit"] == task.source_commit
+    assert handoff["commands"][0] == 'test -z "$(git status --porcelain)"'
+    assert not any(command.startswith("git fetch") for command in handoff["commands"])
     assert "gh pr create --draft" in "\n".join(handoff["commands"])
     assert handoff["changed_files"] == ["app.py"]

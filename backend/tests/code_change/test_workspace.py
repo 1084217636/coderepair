@@ -1,4 +1,6 @@
 import json
+import subprocess
+from pathlib import Path
 
 import pytest
 
@@ -47,3 +49,14 @@ def test_prepare_workspace_keeps_previous_copy_when_refresh_fails(tmp_path, monk
         prepare_workspace(str(repo), artifacts)
 
     assert (artifacts / "workspace" / "app.py").read_text(encoding="utf-8") == "version = 1\n"
+
+
+def test_prepare_workspace_uses_fixed_commit_not_dirty_worktree(tmp_path, committed_repo):
+    repo = committed_repo({"app.py": "value = 'committed'\n"})
+    source_commit = subprocess.run(["git", "rev-parse", "HEAD"], cwd=repo, check=True, text=True, stdout=subprocess.PIPE).stdout.strip()
+    (repo / "app.py").write_text("value = 'dirty'\n", encoding="utf-8")
+
+    workspace = prepare_workspace(str(repo), tmp_path / "artifacts", source_commit=source_commit)
+
+    assert workspace.source_commit == source_commit
+    assert (Path(workspace.workspace_path) / "app.py").read_text(encoding="utf-8") == "value = 'committed'\n"

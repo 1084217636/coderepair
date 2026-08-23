@@ -16,6 +16,7 @@ from starlette.types import ASGIApp
 
 from app.gateway.auth.config import get_auth_config
 from app.gateway.auth_disabled import is_auth_disabled
+from app.gateway.code_change_worker_auth import is_code_change_worker_request
 
 CSRF_COOKIE_NAME = "csrf_token"
 CSRF_HEADER_NAME = "X-CSRF-Token"
@@ -39,6 +40,9 @@ def should_check_csrf(request: Request) -> bool:
     GET, HEAD, OPTIONS, and TRACE are exempt per RFC 7231.
     """
     if request.method not in ("POST", "PUT", "DELETE", "PATCH"):
+        return False
+
+    if is_code_change_worker_request(request):
         return False
 
     if is_auth_disabled():

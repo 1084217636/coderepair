@@ -10,7 +10,6 @@ ALLOWED_TRANSITIONS: dict[TaskStatus, set[TaskStatus]] = {
     TaskStatus.RETRIEVING_CONTEXT: {
         TaskStatus.PATCH_RECEIVED,
         TaskStatus.GENERATING_PATCH,
-        TaskStatus.RUNNING_TESTS,
         TaskStatus.FAILED,
     },
     TaskStatus.PATCH_RECEIVED: {TaskStatus.VALIDATING_PATCH, TaskStatus.FAILED},
@@ -21,7 +20,7 @@ ALLOWED_TRANSITIONS: dict[TaskStatus, set[TaskStatus]] = {
     TaskStatus.REVIEWING: {TaskStatus.HANDOFF_READY, TaskStatus.FAILED},
     TaskStatus.HANDOFF_READY: {TaskStatus.APPROVED, TaskStatus.CHANGES_REQUESTED},
     TaskStatus.APPROVED: {TaskStatus.PR_CREATED},
-    TaskStatus.CHANGES_REQUESTED: set(),
+    TaskStatus.CHANGES_REQUESTED: {TaskStatus.QUEUED},
     TaskStatus.PR_CREATED: set(),
     TaskStatus.FAILED: {TaskStatus.QUEUED},
     TaskStatus.ROLLED_BACK: set(),

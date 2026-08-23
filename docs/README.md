@@ -1,8 +1,8 @@
 # CodeRepair 文档入口
 
-学习项目只走一条路线：[CodeRepair / DeerFlow 二开学习手册](handbook/README.md)。请从 00 章按编号读到 20 章；此前新增的 `docs/learning/` 摘要已合并到 handbook，不再单独阅读。
+学习项目只走一条路线：[CodeRepair AI 工程与 Agent 开发学习手册](handbook/README.md)。请从 00 章按编号读到 20 章；`docs/coderepair/` 是开发阶段记录，不是第二套学习顺序。
 
-`handbook/00_START_HERE.md` 到 `handbook/20_STUDY_PLAN.md` 是当前唯一教材。每章包含：
+`handbook/00_START_HERE.md` 到 `handbook/20_RESUME_STUDY_PLAN.md` 是当前唯一教材。每章包含：
 
 - 本章目标和第一次出现的概念。
 - 当前方案解决的问题与选择理由。

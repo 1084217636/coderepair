@@ -43,3 +43,18 @@ def test_patcher_rejects_paths_outside_repo(tmp_path):
 
     with pytest.raises(PatchRejected):
         apply_patch_text(str(repo), patch, tmp_path / "artifacts")
+
+
+@pytest.mark.parametrize("path", [".git/config", "..\\secret.txt", '"a/../secret.txt"'])
+def test_patcher_rejects_git_metadata_and_escaped_paths(tmp_path, path):
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    patch = f"""diff --git a/{path} b/{path}
+--- a/{path}
++++ b/{path}
+@@ -0,0 +1 @@
++unsafe
+"""
+
+    with pytest.raises(PatchRejected):
+        apply_patch_text(str(repo), patch, tmp_path / "artifacts")

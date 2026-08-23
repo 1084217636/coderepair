@@ -53,6 +53,13 @@ def test_state_machine_rejects_skipped_stage():
         transition(task, TaskStatus.REVIEWING)
 
 
+def test_state_machine_rejects_tests_before_patch_validation_and_apply():
+    task = Task(task_id="t1", project_id="demo", requirement="run tests", status=TaskStatus.RETRIEVING_CONTEXT)
+
+    with pytest.raises(InvalidTransition):
+        transition(task, TaskStatus.RUNNING_TESTS)
+
+
 def test_state_machine_allows_failed_task_retry_queue():
     task = Task(task_id="t1", project_id="demo", requirement="run tests")
 
@@ -61,3 +68,11 @@ def test_state_machine_allows_failed_task_retry_queue():
 
     assert task.status == TaskStatus.QUEUED
     assert task.last_error == "boom"
+
+
+def test_state_machine_allows_changes_requested_patch_resubmission():
+    task = Task(task_id="t1", project_id="demo", requirement="run tests", status=TaskStatus.CHANGES_REQUESTED)
+
+    transition(task, TaskStatus.QUEUED, "revised patch queued")
+
+    assert task.status == TaskStatus.QUEUED

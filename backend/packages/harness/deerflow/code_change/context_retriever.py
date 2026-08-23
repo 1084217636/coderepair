@@ -37,4 +37,9 @@ def retrieve_context(repo_path: str, requirement: str, files: list[CodeFile], li
 
 
 def tokenize(text: str) -> set[str]:
-    return {token.lower() for token in re.findall(r"[A-Za-z_][A-Za-z0-9_]{1,}", text)}
+    terms = {token.lower() for token in re.findall(r"[A-Za-z_][A-Za-z0-9_]{1,}", text)}
+    for segment in re.findall(r"[\u3400-\u4dbf\u4e00-\u9fff]+", text):
+        terms.add(segment)
+        for width in (2, 3):
+            terms.update(segment[index : index + width] for index in range(len(segment) - width + 1))
+    return terms

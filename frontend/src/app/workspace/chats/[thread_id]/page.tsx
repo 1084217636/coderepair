@@ -13,6 +13,7 @@ import {
 } from "@/components/workspace/chats";
 import { ExportTrigger } from "@/components/workspace/export-trigger";
 import { GoalStatus } from "@/components/workspace/goal-status";
+import { AnchoredBranchPanel } from "@/components/workspace/anchored-branch-panel";
 import { InputBox } from "@/components/workspace/input-box";
 import {
   MessageList,
@@ -209,6 +210,7 @@ export default function ChatPage() {
               <ArtifactTrigger />
             </div>
           </header>
+          <AnchoredBranchPanel mainThreadId={threadId} disabled={isNewThread || isMock} />
           <main className="flex min-h-0 max-w-full grow flex-col">
             <div className="flex min-h-0 flex-1 justify-center">
               <MessageList

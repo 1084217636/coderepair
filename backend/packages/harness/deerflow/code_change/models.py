@@ -25,6 +25,11 @@ class TaskStatus(StrEnum):
     ROLLED_BACK = "ROLLED_BACK"
 
 
+class PatchMode(StrEnum):
+    EXTERNAL = "external"
+    AGENT = "agent"
+
+
 @dataclass(slots=True)
 class Project:
     project_id: str
@@ -34,6 +39,7 @@ class Project:
     owner_id: str = "default"
     repo_url: str = ""
     default_branch: str = "main"
+    test_profile: str = ""
     tech_stack: list[str] = field(default_factory=list)
     memory: dict[str, Any] = field(default_factory=dict)
     created_at: str = ""
@@ -135,12 +141,21 @@ class Task:
     approved_at: str = ""
     artifact_dir: str = ""
     source_repo_path: str = ""
+    source_commit: str = ""
+    patch_mode: PatchMode = PatchMode.EXTERNAL
+    agent_model_name: str = ""
+    agent_thread_id: str = ""
+    agent_run_id: str = ""
+    agent_rationale: str = ""
+    agent_changed_files: list[str] = field(default_factory=list)
+    agent_final_message: str = ""
     workspace_path: str = ""
     workspace_manifest_path: str = ""
     sandbox_kind: str = ""
     created_at: str = ""
     updated_at: str = ""
     error: str = ""
+    error_code: str = ""
     attempt_count: int = 0
     max_attempts: int = 2
     last_error: str = ""
@@ -148,17 +163,21 @@ class Task:
     started_at: str = ""
     finished_at: str = ""
     worker_id: str = ""
+    claim_id: str = ""
+    heartbeat_at: str = ""
     lease_expires_at: str = ""
 
     def to_dict(self) -> dict[str, Any]:
         data = asdict(self)
         data["status"] = str(self.status)
+        data["patch_mode"] = str(self.patch_mode)
         return data
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> Task:
         data = dict(data)
         data["status"] = TaskStatus(data["status"])
+        data["patch_mode"] = PatchMode(data.get("patch_mode", PatchMode.EXTERNAL))
         data["steps"] = [TaskStep(**item) for item in data.get("steps", [])]
         data["contexts"] = [RetrievedContext(**item) for item in data.get("contexts", [])]
         if data.get("patch_result"):

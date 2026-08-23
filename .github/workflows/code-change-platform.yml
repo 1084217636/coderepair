@@ -2,9 +2,9 @@ name: Code Change Platform CI
 
 on:
   push:
-    branches: ["agent-code-change-platform"]
+    branches: ["main", "agent-code-change-platform"]
   pull_request:
-    branches: ["agent-code-change-platform"]
+    branches: ["main", "agent-code-change-platform"]
     types: [opened, synchronize, reopened, ready_for_review]
   workflow_dispatch:
 
@@ -41,18 +41,66 @@ jobs:
       - name: Lint code-change extension
         working-directory: backend
         run: |
-          uv run ruff check packages/harness/deerflow/code_change tests/code_change app/gateway/routers/code_change.py
-          uv run ruff format --check packages/harness/deerflow/code_change tests/code_change app/gateway/routers/code_change.py
+          uv run ruff check packages/harness/deerflow/code_change tests/code_change app/gateway/routers/code_change.py app/gateway/code_change_worker_auth.py app/gateway/auth_middleware.py app/gateway/csrf_middleware.py
+          uv run ruff format --check packages/harness/deerflow/code_change tests/code_change app/gateway/routers/code_change.py app/gateway/code_change_worker_auth.py app/gateway/auth_middleware.py app/gateway/csrf_middleware.py
 
       - name: Run code-change tests
         working-directory: backend
         run: PYTHONPATH=. uv run pytest tests/code_change -q
+
+      - name: Validate beginner handbook contract
+        run: python3 scripts/validate_code_change_handbook.py
+
+      - name: Run 20-case code-change release evaluation
+        working-directory: backend
+        run: |
+          PYTHONPATH=. uv run python -m deerflow.code_change.evaluation --output ../artifacts/code-change-evaluation
+          PYTHONPATH=. uv run python -c "import json, pathlib; metrics=json.loads(pathlib.Path('../artifacts/code-change-evaluation/evaluation.json').read_text())['metrics']; assert metrics['task_count'] == 20; assert metrics['task_success_rate'] == 0.5; assert metrics['test_pass_rate'] == 0.5; assert metrics['patch_apply_rate'] == 0.65; assert metrics['unsafe_patch_block_rate'] == 1.0; assert metrics['status_counts'] == {'FAILED': 10, 'HANDOFF_READY': 10}"
+
+      - name: Upload evaluation evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: code-change-evaluation
+          path: artifacts/code-change-evaluation
+          if-no-files-found: error
 
       - name: Import smoke test
         working-directory: backend
         run: >-
           PYTHONPATH=. uv run python -c
           "from app.gateway.routers.code_change import router;
-          from deerflow.code_change.models import TaskStatus;
+          from deerflow.code_change.models import PatchMode, TaskStatus;
+          assert str(PatchMode.AGENT) == 'agent';
           assert str(TaskStatus.HANDOFF_READY) == 'HANDOFF_READY';
           assert router.prefix == '/api/code-change'"
+
+  frontend-code-change:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+
+      - name: Enable pinned pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@10.26.2 --activate
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint and type-check frontend
+        working-directory: frontend
+        run: pnpm check
+
+      - name: Run frontend unit tests
+        working-directory: frontend
+        run: pnpm test

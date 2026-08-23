@@ -1,6 +1,6 @@
 # CodeRepair 学习入口
 
-CodeRepair 的主学习资料在 [`handbook/README.md`](handbook/README.md)。手册按 00 到 20 编号，假设你只会 Python 基本语法。第一次学习时，按编号顺序读，不需要同时翻旧版总结文档。
+CodeRepair 的主学习资料在 [`handbook/README.md`](handbook/README.md)。手册按 00 到 20 编号，先补 LLM 与 Agent 工程基础，再进入 DeerFlow Runtime、受限 Coding Agent、Anchored Branch Context、安全评测与面试。第一次学习时只按这一套顺序读。
 
 每一章都包含两块固定内容：
 
@@ -9,11 +9,13 @@ CodeRepair 的主学习资料在 [`handbook/README.md`](handbook/README.md)。�
 
 ## 三遍学习法
 
-第一遍读 00 到 06。目标是能用自己的话回答：DeerFlow 上游有什么，个人二开增加了什么，为什么代码变更不能只靠一段 prompt。
+第一遍读 00 到 04。目标是跑通演示并补齐 Python async、HTTP/SSE、LLM 消息、token 与 structured output。
 
-第二遍读 07 到 17。目标是能从 HTTP 请求讲到 Task、Queue、Worker、Workspace、Patch、测试、报告和审批，并能解释故障恢复。
+第二遍读 05 到 09。目标是能讲清 DeerFlow Runtime、Agent Loop、LangGraph State、Tool、Middleware、Memory、Skill 与 Sub-Agent。
 
-第三遍读 18 到 20。目标是记住具体类、字段和函数，完成简历口径、模拟面试与闭卷验收。
+第三遍读 10 到 15。目标是走通检索、Patch Agent、Workspace/Test、Anchored Branch、Context 与 Decision/HITL。
+
+第四遍读 16 到 20。目标是完成安全威胁模型、Agent eval、故障排查、源码地图和六周面试验收。
 
 ## 当前实现的统一口径
 

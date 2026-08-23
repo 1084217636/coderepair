@@ -55,6 +55,7 @@ web/
 # Deployment artifacts
 backend/Dockerfile.langgraph
 config.yaml.bak
+/artifacts/
 .playwright-mcp
 /frontend/test-results/
 /frontend/playwright-report/

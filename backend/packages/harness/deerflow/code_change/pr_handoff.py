@@ -28,6 +28,7 @@ def write_pr_handoff(project: Project, task: Task, patch: PatchResult, test_resu
         "project_id": task.project_id,
         "repo_url": project.repo_url,
         "source_repo_path": project.repo_path,
+        "source_commit": task.source_commit,
         "base_branch": project.default_branch,
         "branch_name": branch_name,
         "title": title,
@@ -43,7 +44,7 @@ def write_pr_handoff(project: Project, task: Task, patch: PatchResult, test_resu
             "duration_seconds": test_result.duration_seconds,
             "log_path": test_result.log_path,
         },
-        "commands": build_commands(project, branch_name, commit_message, title, body_path, patch_path),
+        "commands": build_commands(project, task.source_commit, branch_name, commit_message, title, body_path, patch_path),
         "note": "Review and run these commands from source_repo_path only after human approval.",
     }
 
@@ -66,10 +67,19 @@ def build_title(requirement: str) -> str:
     return cleaned
 
 
-def build_commands(project: Project, branch_name: str, commit_message: str, title: str, body_path: Path, patch_path: Path) -> list[str]:
+def build_commands(
+    project: Project,
+    source_commit: str,
+    branch_name: str,
+    commit_message: str,
+    title: str,
+    body_path: Path,
+    patch_path: Path,
+) -> list[str]:
     commands = [
-        f"git checkout {shlex.quote(project.default_branch)}",
-        "git pull --ff-only",
+        'test -z "$(git status --porcelain)"',
+        f"git cat-file -e {shlex.quote(source_commit + '^{commit}')}",
+        f"git checkout --detach {shlex.quote(source_commit)}",
         f"git checkout -b {shlex.quote(branch_name)}",
         f"git apply {shlex.quote(str(patch_path))}",
         "git add -A",

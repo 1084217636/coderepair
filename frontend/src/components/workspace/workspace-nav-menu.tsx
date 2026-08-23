@@ -3,12 +3,14 @@
 import {
   BugIcon,
   ChevronsUpDown,
+  Code2Icon,
   GlobeIcon,
   InfoIcon,
   MailIcon,
   Settings2Icon,
   SettingsIcon,
 } from "lucide-react";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import {
@@ -88,6 +90,13 @@ export function WorkspaceNavMenu() {
                 sideOffset={4}
               >
                 <DropdownMenuGroup>
+                  <Link href="/workspace/code-change">
+                    <DropdownMenuItem>
+                      <Code2Icon />
+                      Code Change
+                    </DropdownMenuItem>
+                  </Link>
+                  <DropdownMenuSeparator />
                   <DropdownMenuItem
                     onClick={() => {
                       setSettingsDefaultSection("appearance");

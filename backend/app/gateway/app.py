@@ -13,6 +13,7 @@ from app.gateway.csrf_middleware import CSRFMiddleware, get_configured_cors_orig
 from app.gateway.deps import langgraph_runtime
 from app.gateway.routers import (
     agents,
+    anchored_branch,
     artifacts,
     assistants_compat,
     auth,
@@ -424,6 +425,9 @@ This gateway provides runtime endpoints for agent runs plus custom endpoints for
 
     # Code Change API is mounted at /api/code-change
     app.include_router(code_change.router)
+
+    # Anchored Branch API reuses DeerFlow child Threads, Runs and SSE.
+    app.include_router(anchored_branch.router)
 
     # Assistants compatibility API (LangGraph Platform stub)
     app.include_router(assistants_compat.router)

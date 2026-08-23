@@ -1,4 +1,11 @@
-from deerflow.code_change.evaluation import EvaluationCase, _patch, run_evaluation
+from deerflow.code_change.evaluation import EvaluationCase, _patch, fixed_cases, run_evaluation
+
+
+def test_fixed_release_gate_has_exactly_twenty_cases():
+    cases = fixed_cases()
+
+    assert len(cases) == 20
+    assert {case.kind for case in cases} == {"success", "invalid_context", "unsafe_path", "test_failure"}
 
 
 def test_evaluation_reports_success_failure_and_safety_metrics(tmp_path):

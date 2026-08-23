@@ -137,6 +137,9 @@ _CONTEXT_CONFIGURABLE_KEYS: frozenset[str] = frozenset(
         "max_concurrent_subagents",
         "agent_name",
         "is_bootstrap",
+        "branch_id",
+        "branch_context",
+        "branch_decision",
     }
 )
 
@@ -534,6 +537,15 @@ async def start_run(
         # Only agent-relevant keys are forwarded; unknown keys (e.g. thread_id) are ignored.
         merge_run_context_overrides(config, getattr(body, "context", None))
         inject_authenticated_user_context(config, request)
+
+        # Apply-to-Main persists the structured decision on Thread metadata.
+        # The next main-thread run receives it automatically; clients do not
+        # need to copy a long branch transcript into the request body.
+        thread_record = await run_ctx.thread_store.get(thread_id)
+        if thread_record and isinstance(thread_record.get("metadata"), dict):
+            decision = thread_record["metadata"].get("anchored_branch_decision")
+            if isinstance(decision, dict):
+                config.setdefault("context", {})["branch_decision"] = decision
 
         stream_modes = normalize_stream_modes(body.stream_mode)
 

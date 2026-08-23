@@ -1,6 +1,7 @@
-import subprocess
+import sys
 from pathlib import Path
 
+import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
@@ -8,24 +9,36 @@ from app.gateway.routers import code_change
 from deerflow.code_change.store import CodeChangeStore
 
 
-def test_code_change_router_runs_patch_task(tmp_path):
-    repo = tmp_path / "repo"
-    repo.mkdir()
-    subprocess.run(["git", "init"], cwd=repo, check=True, stdout=subprocess.PIPE)
-    (repo / "app.py").write_text("def health():\n    return 'bad'\n", encoding="utf-8")
+@pytest.fixture(autouse=True)
+def enable_code_change(monkeypatch):
+    monkeypatch.setenv("DEER_FLOW_CODE_CHANGE_ENABLED", "true")
+    monkeypatch.setenv("DEER_FLOW_CODE_CHANGE_WORKER_TOKEN", "test-worker-token")
 
-    store = CodeChangeStore(tmp_path / "state")
+
+def worker_headers() -> dict[str, str]:
+    return {"X-Code-Change-Worker-Token": "test-worker-token"}
+
+
+def make_client(store: CodeChangeStore, test_command: str) -> TestClient:
     app = FastAPI()
     app.dependency_overrides[code_change.get_code_change_store] = lambda: store
+    app.dependency_overrides[code_change.get_code_change_test_profiles] = lambda: {"test-profile": test_command}
     app.include_router(code_change.router)
-    client = TestClient(app)
+    return TestClient(app)
+
+
+def test_code_change_router_runs_patch_task(tmp_path, committed_repo):
+    repo = committed_repo({"app.py": "def health():\n    return 'bad'\n"})
+
+    store = CodeChangeStore(tmp_path / "state")
+    client = make_client(store, "python3 -c \"import app; assert app.health() == 'ok'; print('tests ok')\"")
 
     create_resp = client.post(
         "/api/code-change/projects",
         json={
             "name": "demo",
             "repo_path": str(repo),
-            "test_command": "python3 -c \"import app; assert app.health() == 'ok'; print('tests ok')\"",
+            "test_profile": "test-profile",
         },
     )
     assert create_resp.status_code == 200
@@ -47,7 +60,12 @@ def test_code_change_router_runs_patch_task(tmp_path):
     task = task_resp.json()
     assert task["status"] == "QUEUED"
 
-    worker_resp = client.post("/api/code-change/worker/run-once")
+    list_resp = client.get("/api/code-change/projects/demo/tasks")
+    assert list_resp.status_code == 200
+    assert [item["task_id"] for item in list_resp.json()["tasks"]] == [task["task_id"]]
+
+    assert client.post("/api/code-change/worker/run-once").status_code == 403
+    worker_resp = client.post("/api/code-change/worker/run-once", headers=worker_headers())
     assert worker_resp.status_code == 200
     task = worker_resp.json()
     assert task["status"] == "HANDOFF_READY"
@@ -92,17 +110,11 @@ def test_code_change_router_runs_patch_task(tmp_path):
     assert metrics_resp.json()["status_counts"]["APPROVED"] == 1
 
 
-def test_code_change_router_retries_failed_task(tmp_path):
-    repo = tmp_path / "repo"
-    repo.mkdir()
-    subprocess.run(["git", "init"], cwd=repo, check=True, stdout=subprocess.PIPE)
-    (repo / "app.py").write_text("def health():\n    return 'bad'\n", encoding="utf-8")
+def test_code_change_router_retries_failed_task(tmp_path, committed_repo):
+    repo = committed_repo({"app.py": "def health():\n    return 'bad'\n"})
 
     store = CodeChangeStore(tmp_path / "state")
-    app = FastAPI()
-    app.dependency_overrides[code_change.get_code_change_store] = lambda: store
-    app.include_router(code_change.router)
-    client = TestClient(app)
+    client = make_client(store, "python3 -c \"print('tests ok')\"")
 
     assert (
         client.post(
@@ -110,7 +122,7 @@ def test_code_change_router_retries_failed_task(tmp_path):
             json={
                 "name": "demo",
                 "repo_path": str(repo),
-                "test_command": "python3 -c \"print('tests ok')\"",
+                "test_profile": "test-profile",
             },
         ).status_code
         == 200
@@ -131,7 +143,7 @@ def test_code_change_router_retries_failed_task(tmp_path):
     assert task_resp.status_code == 200
     task_id = task_resp.json()["task_id"]
 
-    failed_resp = client.post("/api/code-change/worker/run-once")
+    failed_resp = client.post("/api/code-change/worker/run-once", headers=worker_headers())
     assert failed_resp.status_code == 200
     assert failed_resp.json()["status"] == "FAILED"
 
@@ -142,3 +154,134 @@ def test_code_change_router_retries_failed_task(tmp_path):
     metrics_resp = client.get("/api/code-change/metrics?project_id=demo")
     assert metrics_resp.status_code == 200
     assert metrics_resp.json()["queue_depth"] == 1
+
+
+def test_code_change_router_rejects_http_test_command(tmp_path, committed_repo):
+    repo = committed_repo({"app.py": "print('ok')\n"})
+    client = make_client(CodeChangeStore(tmp_path / "state"), f'{sys.executable} -c "print(1)"')
+
+    response = client.post(
+        "/api/code-change/projects",
+        json={"name": "demo", "repo_path": str(repo), "test_command": f'{sys.executable} -c "print(1)"'},
+    )
+
+    assert response.status_code == 422
+
+
+def test_code_change_router_is_disabled_by_default(tmp_path, committed_repo, monkeypatch):
+    committed_repo({"app.py": "print('ok')\n"})
+    monkeypatch.delenv("DEER_FLOW_CODE_CHANGE_ENABLED", raising=False)
+    client = make_client(CodeChangeStore(tmp_path / "state"), f'{sys.executable} -c "print(1)"')
+
+    response = client.get("/api/code-change/projects")
+
+    assert response.status_code == 404
+
+
+def test_code_change_router_resubmits_changes_requested_patch(tmp_path, committed_repo):
+    repo = committed_repo({"app.py": "def health():\n    return 'bad'\n"})
+    store = CodeChangeStore(tmp_path / "state")
+    client = make_client(store, "python3 -c \"import app; assert app.health() == 'ok'\"")
+    assert (
+        client.post(
+            "/api/code-change/projects",
+            json={"name": "demo", "repo_path": str(repo), "test_profile": "test-profile"},
+        ).status_code
+        == 200
+    )
+    patch = """diff --git a/app.py b/app.py
+--- a/app.py
++++ b/app.py
+@@ -1,2 +1,2 @@
+ def health():
+-    return 'bad'
++    return 'ok'
+"""
+    task = client.post("/api/code-change/projects/demo/tasks", json={"requirement": "fix health", "patch_text": patch}).json()
+    finished = client.post("/api/code-change/worker/run-once", headers=worker_headers()).json()
+    assert finished["status"] == "HANDOFF_READY"
+    requested = client.post(
+        f"/api/code-change/projects/demo/tasks/{task['task_id']}/review",
+        json={"decision": "request_changes", "note": "please revise"},
+    ).json()
+    assert requested["status"] == "CHANGES_REQUESTED"
+
+    response = client.post(
+        f"/api/code-change/projects/demo/tasks/{task['task_id']}/resubmit",
+        json={"patch_text": patch},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "QUEUED"
+
+
+def test_code_change_router_queues_real_agent_mode(tmp_path, committed_repo):
+    repo = committed_repo({"app.py": "def health():\n    return 'bad'\n"})
+    client = make_client(CodeChangeStore(tmp_path / "state"), "python3 -m pytest -q")
+    assert (
+        client.post(
+            "/api/code-change/projects",
+            json={"name": "demo", "repo_path": str(repo), "test_profile": "test-profile"},
+        ).status_code
+        == 200
+    )
+
+    response = client.post(
+        "/api/code-change/projects/demo/tasks",
+        json={"requirement": "fix health", "patch_mode": "agent", "agent_model_name": "configured-model"},
+    )
+
+    assert response.status_code == 200
+    task = response.json()
+    assert task["status"] == "QUEUED"
+    assert task["patch_mode"] == "agent"
+    assert task["agent_model_name"] == "configured-model"
+    assert task["agent_thread_id"].startswith("code-change-task_")
+    assert task["agent_run_id"].startswith("agent-run-")
+
+
+def test_code_change_router_resubmits_patch_required_task(tmp_path, committed_repo):
+    repo = committed_repo({"app.py": "def health():\n    return 'bad'\n"})
+    store = CodeChangeStore(tmp_path / "state")
+    client = make_client(store, "python3 -c \"import app; assert app.health() == 'ok'\"")
+    assert (
+        client.post(
+            "/api/code-change/projects",
+            json={"name": "demo", "repo_path": str(repo), "test_profile": "test-profile"},
+        ).status_code
+        == 200
+    )
+    task = client.post(
+        "/api/code-change/projects/demo/tasks",
+        json={"requirement": "fix health"},
+    ).json()
+    failed = client.post("/api/code-change/worker/run-once", headers=worker_headers()).json()
+    assert failed["error_code"] == "PATCH_REQUIRED"
+    retry = client.post(f"/api/code-change/projects/demo/tasks/{task['task_id']}/retry")
+    assert retry.status_code == 409
+    assert "resubmit_patch" in retry.json()["detail"]
+    patch = """diff --git a/app.py b/app.py
+--- a/app.py
++++ b/app.py
+@@ -1,2 +1,2 @@
+ def health():
+-    return 'bad'
++    return 'ok'
+"""
+
+    response = client.post(
+        f"/api/code-change/projects/demo/tasks/{task['task_id']}/resubmit",
+        json={"patch_text": patch},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "QUEUED"
+
+
+def test_worker_token_must_be_explicitly_configured(tmp_path, monkeypatch):
+    monkeypatch.delenv("DEER_FLOW_CODE_CHANGE_WORKER_TOKEN", raising=False)
+    client = make_client(CodeChangeStore(tmp_path / "state"), "python3 -m pytest -q")
+
+    response = client.post("/api/code-change/worker/run-once", headers=worker_headers())
+
+    assert response.status_code == 403

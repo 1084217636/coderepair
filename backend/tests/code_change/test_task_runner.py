@@ -1,4 +1,3 @@
-import subprocess
 import sys
 from pathlib import Path
 
@@ -7,27 +6,23 @@ from deerflow.code_change.models import TaskStatus
 from deerflow.code_change.store import CodeChangeStore
 
 
-def test_task_runner_writes_report_and_test_log(tmp_path):
-    repo = tmp_path / "repo"
-    repo.mkdir()
-    (repo / "app.py").write_text("def health():\n    return 'ok'\n", encoding="utf-8")
+def test_task_runner_without_patch_fails_closed(tmp_path, committed_repo):
+    repo = committed_repo({"app.py": "def health():\n    return 'ok'\n"})
     store = CodeChangeStore(tmp_path / "state")
     store.create_project("demo", str(repo), f"{sys.executable} -c \"print('tests ok')\"")
 
     task = run_task(store, "demo", "check health function")
 
     artifact_dir = tmp_path / "state" / "projects" / "demo" / "tasks" / task.task_id
-    assert task.status == TaskStatus.REVIEWING
+    assert task.status == TaskStatus.FAILED
+    assert task.error_code == "PATCH_REQUIRED"
     assert (artifact_dir / "task_report.md").exists()
-    assert (artifact_dir / "test.log").read_text(encoding="utf-8").strip() == "tests ok"
+    assert not (artifact_dir / "test.log").exists()
     assert (artifact_dir / "audit.json").exists()
 
 
-def test_task_runner_applies_patch_and_writes_pr_body(tmp_path):
-    repo = tmp_path / "repo"
-    repo.mkdir()
-    subprocess.run(["git", "init"], cwd=repo, check=True, stdout=subprocess.PIPE)
-    (repo / "app.py").write_text("def health():\n    return 'bad'\n", encoding="utf-8")
+def test_task_runner_applies_patch_and_writes_pr_body(tmp_path, committed_repo):
+    repo = committed_repo({"app.py": "def health():\n    return 'bad'\n"})
     patch = tmp_path / "fix.patch"
     patch.write_text(
         """diff --git a/app.py b/app.py
@@ -48,6 +43,7 @@ def test_task_runner_applies_patch_and_writes_pr_body(tmp_path):
 
     artifact_dir = tmp_path / "state" / "projects" / "demo" / "tasks" / task.task_id
     assert task.status == TaskStatus.HANDOFF_READY
+    assert len(task.source_commit) == 40
     assert task.sandbox_kind == "local-copy"
     assert task.workspace_path
     assert task.workspace_manifest_path

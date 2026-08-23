@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import fcntl
 import json
 import os
-from collections.abc import Iterable
+from collections.abc import Iterable, Iterator
+from contextlib import contextmanager
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from uuid import uuid4
@@ -12,6 +14,10 @@ from deerflow.code_change.models import Project, Task, TaskStatus, ensure_repo_p
 
 def now_iso() -> str:
     return datetime.now(UTC).isoformat()
+
+
+class StaleTaskClaim(RuntimeError):
+    """Raised when a worker tries to mutate a task after losing its lease."""
 
 
 class CodeChangeStore:
@@ -35,7 +41,15 @@ class CodeChangeStore:
         self.allowed_repo_roots = [Path(root).expanduser().resolve() for root in allowed_repo_roots]
         self.projects_dir.mkdir(parents=True, exist_ok=True)
 
-    def create_project(self, name: str, repo_path: str, test_command: str, repo_url: str = "", default_branch: str = "main") -> Project:
+    def create_project(
+        self,
+        name: str,
+        repo_path: str,
+        test_command: str,
+        repo_url: str = "",
+        default_branch: str = "main",
+        test_profile: str = "",
+    ) -> Project:
         safe = project_safe_name(name)
         repo = ensure_repo_path(repo_path, self.allowed_repo_roots)
         projects = self._load_index()
@@ -48,6 +62,7 @@ class CodeChangeStore:
             repo_url=repo_url,
             default_branch=default_branch,
             test_command=test_command,
+            test_profile=test_profile,
             owner_id=self.owner_id,
             created_at=now_iso(),
             updated_at=now_iso(),
@@ -70,14 +85,29 @@ class CodeChangeStore:
         self._ensure_owner(project.owner_id)
         return project
 
-    def save_task(self, task: Task) -> None:
+    def save_task(self, task: Task, *, expected_claim_id: str | None = None) -> None:
         self._ensure_owner(task.owner_id)
         task_path = Path(task.artifact_dir) / "task.json"
-        self._write_json(task_path, task.to_dict())
+        with self._task_claim_lock(task):
+            claim = self._read_claim(task)
+            if expected_claim_id:
+                self._validate_claim(claim, task.worker_id, expected_claim_id, require_unexpired=True)
+            elif claim is not None:
+                if self._claim_expiry(claim) > datetime.now(UTC):
+                    raise StaleTaskClaim("task has an active worker claim")
+                self._claim_path(task).unlink(missing_ok=True)
+                task.worker_id = ""
+                task.claim_id = ""
+                task.heartbeat_at = ""
+                task.lease_expires_at = ""
+            self._write_json(task_path, task.to_dict())
         self.append_timeline(task.project_id, "TASK_UPDATED", f"{task.task_id} status={task.status}")
 
     def get_task(self, project_id: str, task_id: str) -> Task:
-        task_path = self.project_dir(project_id) / "tasks" / task_id / "task.json"
+        safe_task_id = project_safe_name(task_id)
+        if safe_task_id != task_id:
+            raise KeyError(f"task not found: {task_id}")
+        task_path = self.project_dir(project_id) / "tasks" / safe_task_id / "task.json"
         if not task_path.exists():
             raise KeyError(f"task not found: {task_id}")
         task = Task.from_dict(self._read_json(task_path))
@@ -146,54 +176,147 @@ class CodeChangeStore:
                 continue
             if task.status is not TaskStatus.QUEUED:
                 continue
-            if self._claim_task_file(task, worker_id, lease_seconds):
-                task.worker_id = worker_id
-                task.lease_expires_at = (datetime.now(UTC) + timedelta(seconds=lease_seconds)).isoformat()
-                self.save_task(task)
-                self.append_timeline(task.project_id, "TASK_CLAIMED", f"{task.task_id} worker={worker_id}")
-                return task
+            claimed = self._claim_task_file(task, worker_id, lease_seconds)
+            if claimed is not None:
+                self.append_timeline(claimed.project_id, "TASK_CLAIMED", f"{claimed.task_id} worker={worker_id} claim={claimed.claim_id}")
+                return claimed
         return None
 
-    def release_task_claim(self, task: Task, worker_id: str) -> None:
-        claim_path = Path(task.artifact_dir) / ".claim.json"
-        if claim_path.exists():
-            try:
-                claim = self._read_json(claim_path)
-            except (OSError, json.JSONDecodeError):
-                claim = {}
-            if claim.get("worker_id") != worker_id:
-                raise ValueError("task claim belongs to another worker")
-            claim_path.unlink(missing_ok=True)
-        task.worker_id = ""
-        task.lease_expires_at = ""
-        self.save_task(task)
+    def renew_task_claim(
+        self,
+        project_id: str,
+        task_id: str,
+        worker_id: str,
+        claim_id: str,
+        *,
+        lease_seconds: int = 300,
+    ) -> Task:
+        if lease_seconds <= 0:
+            raise ValueError("lease_seconds must be positive when renewing a task claim")
+        task = self.get_task(project_id, task_id)
+        with self._task_claim_lock(task):
+            claim = self._read_claim(task)
+            self._validate_claim(claim, worker_id, claim_id, require_unexpired=True)
+            heartbeat_at = now_iso()
+            expires_at = (datetime.now(UTC) + timedelta(seconds=lease_seconds)).isoformat()
+            claim = {"worker_id": worker_id, "claim_id": claim_id, "heartbeat_at": heartbeat_at, "expires_at": expires_at}
+            self._write_json(self._claim_path(task), claim)
+            persisted = self._read_task_file(task)
+            persisted.worker_id = worker_id
+            persisted.claim_id = claim_id
+            persisted.heartbeat_at = heartbeat_at
+            persisted.lease_expires_at = expires_at
+            self._write_json(Path(persisted.artifact_dir) / "task.json", persisted.to_dict())
+            return persisted
 
-    def _claim_task_file(self, task: Task, worker_id: str, lease_seconds: int) -> bool:
-        claim_path = Path(task.artifact_dir) / ".claim.json"
-        for _ in range(2):
+    def assert_task_claim(self, task: Task, worker_id: str, claim_id: str) -> None:
+        with self._task_claim_lock(task):
+            self._validate_claim(self._read_claim(task), worker_id, claim_id, require_unexpired=True)
+
+    def release_task_claim(self, task: Task, worker_id: str, claim_id: str) -> bool:
+        with self._task_claim_lock(task):
+            claim = self._read_claim(task)
+            try:
+                self._validate_claim(claim, worker_id, claim_id, require_unexpired=False)
+            except StaleTaskClaim:
+                return False
+            persisted = self._read_task_file(task)
+            persisted.worker_id = ""
+            persisted.claim_id = ""
+            persisted.heartbeat_at = ""
+            persisted.lease_expires_at = ""
+            self._write_json(Path(persisted.artifact_dir) / "task.json", persisted.to_dict())
+            self._claim_path(task).unlink(missing_ok=True)
+            task.worker_id = ""
+            task.claim_id = ""
+            task.heartbeat_at = ""
+            task.lease_expires_at = ""
+        self.append_timeline(task.project_id, "TASK_RELEASED", f"{task.task_id} worker={worker_id} claim={claim_id}")
+        return True
+
+    def _claim_task_file(self, task: Task, worker_id: str, lease_seconds: int) -> Task | None:
+        claim_path = self._claim_path(task)
+        with self._task_claim_lock(task):
+            task = self._read_task_file(task)
+            if task.status is not TaskStatus.QUEUED:
+                return None
+            current = self._read_claim(task)
+            if current is not None and self._claim_expiry(current) > datetime.now(UTC):
+                return None
+            claim_path.unlink(missing_ok=True)
             expires_at = datetime.now(UTC) + timedelta(seconds=lease_seconds)
-            payload = json.dumps({"worker_id": worker_id, "expires_at": expires_at.isoformat()}).encode()
+            claim_id = uuid4().hex
+            heartbeat_at = now_iso()
+            payload = json.dumps({"worker_id": worker_id, "claim_id": claim_id, "heartbeat_at": heartbeat_at, "expires_at": expires_at.isoformat()}).encode()
             try:
                 fd = os.open(claim_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
             except FileExistsError:
-                try:
-                    current = self._read_json(claim_path)
-                    current_expiry = datetime.fromisoformat(current["expires_at"])
-                except (OSError, KeyError, ValueError, json.JSONDecodeError):
-                    current_expiry = datetime.min.replace(tzinfo=UTC)
-                if current_expiry > datetime.now(UTC):
-                    return False
-                try:
-                    claim_path.unlink()
-                except FileNotFoundError:
-                    pass
-                continue
+                return None
             with os.fdopen(fd, "wb") as fh:
                 fh.write(payload)
                 fh.flush()
                 os.fsync(fh.fileno())
-            return True
-        return False
+            task.worker_id = worker_id
+            task.claim_id = claim_id
+            task.heartbeat_at = heartbeat_at
+            task.lease_expires_at = expires_at.isoformat()
+            self._write_json(Path(task.artifact_dir) / "task.json", task.to_dict())
+            return task
+
+    @contextmanager
+    def _task_claim_lock(self, task: Task) -> Iterator[None]:
+        lock_path = Path(task.artifact_dir) / ".claim.lock"
+        lock_path.parent.mkdir(parents=True, exist_ok=True)
+        descriptor = os.open(lock_path, os.O_RDWR | os.O_CREAT, 0o600)
+        try:
+            fcntl.flock(descriptor, fcntl.LOCK_EX)
+            yield
+        finally:
+            fcntl.flock(descriptor, fcntl.LOCK_UN)
+            os.close(descriptor)
+
+    @staticmethod
+    def _claim_path(task: Task) -> Path:
+        return Path(task.artifact_dir) / ".claim.json"
+
+    def _read_claim(self, task: Task) -> dict | None:
+        path = self._claim_path(task)
+        if not path.exists():
+            return None
+        try:
+            return self._read_json(path)
+        except (OSError, json.JSONDecodeError):
+            return {}
+
+    @staticmethod
+    def _claim_expiry(claim: dict) -> datetime:
+        try:
+            expiry = datetime.fromisoformat(str(claim["expires_at"]))
+        except (KeyError, TypeError, ValueError):
+            return datetime.min.replace(tzinfo=UTC)
+        if expiry.tzinfo is None:
+            expiry = expiry.replace(tzinfo=UTC)
+        return expiry
+
+    def _validate_claim(
+        self,
+        claim: dict | None,
+        worker_id: str,
+        claim_id: str,
+        *,
+        require_unexpired: bool,
+    ) -> None:
+        if claim is None:
+            raise StaleTaskClaim("task claim no longer exists")
+        if claim.get("worker_id") != worker_id or claim.get("claim_id") != claim_id:
+            raise StaleTaskClaim("task claim belongs to another worker or attempt")
+        if require_unexpired and self._claim_expiry(claim) <= datetime.now(UTC):
+            raise StaleTaskClaim("task claim lease has expired")
+
+    def _read_task_file(self, task: Task) -> Task:
+        persisted = Task.from_dict(self._read_json(Path(task.artifact_dir) / "task.json"))
+        self._ensure_owner(persisted.owner_id)
+        return persisted
 
     def project_dir(self, project_id: str) -> Path:
         return self.projects_dir / project_safe_name(project_id)

@@ -23,6 +23,8 @@ def render_task_report(task: Task) -> str:
         f"- Requirement: {task.requirement}",
         f"- Sandbox: `{task.sandbox_kind or 'none'}`",
         f"- Source repo: `{task.source_repo_path or 'n/a'}`",
+        f"- Source commit: `{task.source_commit or 'n/a'}`",
+        f"- Patch mode: `{task.patch_mode}`",
         f"- Workspace: `{task.workspace_path or 'n/a'}`",
         f"- Workspace manifest: `{task.workspace_manifest_path or 'n/a'}`",
         "",
@@ -34,6 +36,23 @@ def render_task_report(task: Task) -> str:
             lines.append(f"- `{ctx.path}` score={ctx.score} ({ctx.reason})")
     else:
         lines.append("- No context retrieved.")
+
+    if task.patch_mode == "agent":
+        lines.extend(
+            [
+                "",
+                "## Agent Proposal",
+                "",
+                f"- Model: `{task.agent_model_name or 'configured default'}`",
+                f"- Thread ID: `{task.agent_thread_id or 'n/a'}`",
+                f"- Run ID: `{task.agent_run_id or 'n/a'}`",
+                f"- Rationale: {task.agent_rationale or 'n/a'}",
+                "- Candidate files:",
+            ]
+        )
+        lines.extend(f"  - `{path}`" for path in task.agent_changed_files)
+        if not task.agent_changed_files:
+            lines.append("  - None")
 
     lines.extend(["", "## Patch", ""])
     if task.patch_result:
@@ -85,6 +104,6 @@ def render_task_report(task: Task) -> str:
             ]
         )
     if task.error:
-        lines.extend(["", "## Error", "", task.error])
+        lines.extend(["", "## Error", "", f"- Code: `{task.error_code or 'TASK_FAILED'}`", f"- Detail: {task.error}"])
     lines.append("")
     return "\n".join(lines)

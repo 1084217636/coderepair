@@ -85,9 +85,13 @@ def validate_patch_paths(paths: list[str]) -> None:
     if not paths:
         raise PatchRejected("patch does not contain changed file paths")
     for item in paths:
+        if "\\" in item or item.startswith(('"', "'")):
+            raise PatchRejected(f"patch path uses unsupported escaping: {item}")
         path = Path(item)
         if path.is_absolute() or ".." in path.parts:
             raise PatchRejected(f"patch path escapes repository: {item}")
+        if path.parts and path.parts[0].casefold() == ".git":
+            raise PatchRejected(f"patch may not modify Git metadata: {item}")
 
 
 def count_changed_lines(patch_text: str) -> tuple[int, int]:
@@ -147,7 +151,7 @@ def write_pr_body(task_id: str, requirement: str, result: PatchResult, test_pass
 
 ## Risks
 
-- Patch is generated from local artifacts in V2; human review is still required before merging.
+- The candidate may come from an external submission or the restricted Patch Agent; inspect the exact diff before approval.
 - The current workflow validates tests but does not yet open a real GitHub PR automatically.
 
 ## Rollback

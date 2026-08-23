@@ -2,6 +2,18 @@
 
 CodeRepair 是我基于 DeerFlow 2.0 二次开发的受控代码变更平台。上游 DeerFlow 提供通用 Agent、Tool、Middleware、Thread/Run 和 SandboxProvider；个人二开位于 `backend/packages/harness/deerflow/code_change/`、Code Change Gateway Router 与 `/workspace/code-change` 前端控制台。
 
+## Anchored Branch 学习主线
+
+```text
+Thread → Run → Agent → Tool → Sandbox → SSE
+→ Anchored Branch
+→ Anchor + Summary + Branch History + Code Context
+→ Branch Decision
+→ Apply to Main
+```
+
+DeerFlow 的 Thread、Run、Checkpoint、Agent、Tool、Sandbox 和 SSE 是上游能力；本项目新增 `deerflow.anchored_branch`、`BranchContextBuilder`、Branch Decision API 和前端选择面板。Branch 使用 Child Thread 保存独立对话，不复制 `branch_messages`；Apply 只把结构化决策写回 Main Thread metadata，下一次 Main Run 再由 Agent 决定是否修改和测试代码。
+
 一次任务从已登记仓库和需求开始。系统支持两种候选 Patch 来源：
 
 - `external`：用户提交 unified diff，用于确定性演示和回归测试。
@@ -11,14 +23,14 @@ CodeRepair 是我基于 DeerFlow 2.0 二次开发的受控代码变更平台。�
 
 ## 第一次学习
 
-学习本项目时只看 [CodeRepair / DeerFlow 二开学习手册](docs/handbook/README.md)，从第 00 章按编号读到第 20 章。`docs/handbook/` 是唯一学习主线；`docs/` 根目录的其他文档是设计记录、验证证据或历史材料，不能替代手册。
+学习本项目时只看 [CodeRepair AI 工程与 Agent 开发学习手册](docs/handbook/README.md)，从第 00 章按编号读到第 20 章。它先补 LLM/Agent 基础，再进入项目实现、安全评测和面试；其他 docs 不构成第二套顺序。
 
 ## 个人二开的当前实现
 
-- Project、Task、状态机和 owner 目录隔离。
 - 外部 Patch 与最小权限 DeerFlow Patch Agent 两条入口。
-- 文件队列、claim_id、lease、heartbeat 和 stale writer fencing。
+- Anchored Branch、上下文预算、结构化 Decision 与显式 Apply to Main。
 - 固定 Git commit 的 local-copy Workspace、Patch 路径校验和服务端测试 profile。
+- Project、Task、状态机、owner 隔离，以及 claim/lease/fencing 控制面。
 - Task timeline、测试报告、审计材料、人工 approve/request changes 和 PR handoff。
 - FastAPI 接口与 Next.js Code Change 控制台。
 - fake-model Agent 集成测试，以及 20 条外部 Patch 确定性评测。
@@ -50,7 +62,7 @@ pnpm check
 pnpm test
 ```
 
-[![Code Change Platform CI](https://github.com/1084217636/coderepair/actions/workflows/code-change-platform.yml/badge.svg?branch=main)](https://github.com/1084217636/coderepair/actions/workflows/code-change-platform.yml?query=branch%3Amain)
+[![Code Change Platform CI](https://github.com/1084217636/coderepair/actions/workflows/code-change-platform.yml/badge.svg?branch=agent-code-change-platform)](https://github.com/1084217636/coderepair/actions/workflows/code-change-platform.yml?query=branch%3Aagent-code-change-platform)
 
 下面保留上游 DeerFlow 2.0 的原始说明。面试和简历中应把上游能力与个人二开分开。
 

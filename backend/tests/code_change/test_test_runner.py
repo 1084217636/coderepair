@@ -1,4 +1,7 @@
+import os
+import shlex
 import sys
+import time
 
 import pytest
 
@@ -54,3 +57,33 @@ def test_build_command_rejects_python_prefix_impersonation():
 
     with pytest.raises(SandboxPolicyViolation, match="executable is not allowed"):
         build_command("python3.12evil -m pytest", policy)
+
+
+def test_run_tests_does_not_inherit_gateway_secrets(tmp_path, monkeypatch):
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    monkeypatch.setenv("OPENAI_API_KEY", "must-not-leak")
+    monkeypatch.setenv("DEER_FLOW_INTERNAL_AUTH_TOKEN", "must-not-leak-either")
+    command = f"{sys.executable} -c \"import os; assert os.getenv('OPENAI_API_KEY') is None; assert os.getenv('DEER_FLOW_INTERNAL_AUTH_TOKEN') is None\""
+
+    result = run_tests(str(repo), command, tmp_path / "artifacts")
+
+    assert result.exit_code == 0
+    assert os.environ["OPENAI_API_KEY"] == "must-not-leak"
+    assert (tmp_path / "artifacts" / "test-home").is_dir()
+
+
+@pytest.mark.skipif(os.name != "posix", reason="POSIX process groups are required for this assertion")
+def test_run_tests_timeout_kills_spawned_process_group(tmp_path):
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    marker = tmp_path / "orphan-marker"
+    child = f"import time, pathlib; time.sleep(0.4); pathlib.Path({str(marker)!r}).write_text('orphan')"
+    parent = f"import subprocess, sys, time; subprocess.Popen([sys.executable, '-c', {child!r}]); time.sleep(5)"
+
+    result = run_tests(str(repo), shlex.join([sys.executable, "-c", parent]), tmp_path / "artifacts", timeout=0.1)
+    time.sleep(0.6)
+
+    assert result.exit_code == 124
+    assert result.timed_out is True
+    assert not marker.exists()

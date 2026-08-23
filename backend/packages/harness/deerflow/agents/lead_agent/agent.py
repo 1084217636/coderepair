@@ -430,6 +430,13 @@ def _make_lead_agent(config: RunnableConfig, *, app_config: AppConfig):
 
     cfg = _get_runtime_config(config)
     resolved_app_config = app_config
+    custom_middlewares = []
+    branch_context = cfg.get("branch_context")
+    branch_decision = cfg.get("branch_decision")
+    if isinstance(branch_context, dict) or isinstance(branch_decision, dict):
+        from deerflow.anchored_branch.middleware import AnchoredBranchContextMiddleware
+
+        custom_middlewares.append(AnchoredBranchContextMiddleware())
 
     thinking_enabled = cfg.get("thinking_enabled", True)
     reasoning_effort = cfg.get("reasoning_effort", None)
@@ -515,6 +522,7 @@ def _make_lead_agent(config: RunnableConfig, *, app_config: AppConfig):
                 available_skills=set(_BOOTSTRAP_SKILL_NAMES),
                 app_config=resolved_app_config,
                 deferred_setup=setup,
+                custom_middlewares=custom_middlewares,
             ),
             system_prompt=apply_prompt_template(
                 subagent_enabled=subagent_enabled,
@@ -543,6 +551,7 @@ def _make_lead_agent(config: RunnableConfig, *, app_config: AppConfig):
             available_skills=available_skills,
             app_config=resolved_app_config,
             deferred_setup=setup,
+            custom_middlewares=custom_middlewares,
         ),
         system_prompt=apply_prompt_template(
             subagent_enabled=subagent_enabled,

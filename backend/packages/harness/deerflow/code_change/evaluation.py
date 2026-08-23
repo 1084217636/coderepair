@@ -55,6 +55,12 @@ def run_evaluation(output_dir: str | Path, cases: list[EvaluationCase] | None = 
             repo.mkdir(parents=True)
             subprocess.run(["git", "init", "-q"], cwd=repo, check=True)
             (repo / "app.py").write_text("def value():\n    return 0\n", encoding="utf-8")
+            subprocess.run(["git", "-c", "user.name=Code Change Evaluation", "-c", "user.email=evaluation@example.com", "add", "app.py"], cwd=repo, check=True)
+            subprocess.run(
+                ["git", "-c", "user.name=Code Change Evaluation", "-c", "user.email=evaluation@example.com", "commit", "-q", "-m", "fixture"],
+                cwd=repo,
+                check=True,
+            )
             project = store.create_project(
                 case.case_id,
                 str(repo),
