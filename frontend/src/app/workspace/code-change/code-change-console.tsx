@@ -138,10 +138,20 @@ export function CodeChangeConsole() {
     };
   }, [selectedProjectId]);
 
+  const activeTaskProjectId = task?.project_id;
+  const activeTaskId = task?.task_id;
+  const activeTaskStatus = task?.status;
+
   useEffect(() => {
-    if (!task || TERMINAL_TASK_STATUSES.has(task.status)) return;
-    const projectId = task.project_id;
-    const taskId = task.task_id;
+    if (
+      !activeTaskProjectId ||
+      !activeTaskId ||
+      !activeTaskStatus ||
+      TERMINAL_TASK_STATUSES.has(activeTaskStatus)
+    )
+      return;
+    const projectId = activeTaskProjectId;
+    const taskId = activeTaskId;
     let cancelled = false;
 
     const poll = async () => {
@@ -176,7 +186,7 @@ export function CodeChangeConsole() {
       cancelled = true;
       window.clearInterval(timer);
     };
-  }, [task?.project_id, task?.status, task?.task_id]);
+  }, [activeTaskId, activeTaskProjectId, activeTaskStatus]);
 
   async function handleCreateProject() {
     if (!name.trim() || !repoPath.trim()) return;

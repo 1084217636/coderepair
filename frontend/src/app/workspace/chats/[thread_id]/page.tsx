@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { type PromptInputMessage } from "@/components/ai-elements/prompt-input";
 import { SidebarTrigger } from "@/components/ui/sidebar";
+import { AnchoredBranchPanel } from "@/components/workspace/anchored-branch-panel";
 import { ArtifactTrigger } from "@/components/workspace/artifacts";
 import {
   ChatBox,
@@ -13,7 +14,6 @@ import {
 } from "@/components/workspace/chats";
 import { ExportTrigger } from "@/components/workspace/export-trigger";
 import { GoalStatus } from "@/components/workspace/goal-status";
-import { AnchoredBranchPanel } from "@/components/workspace/anchored-branch-panel";
 import { InputBox } from "@/components/workspace/input-box";
 import {
   MessageList,
