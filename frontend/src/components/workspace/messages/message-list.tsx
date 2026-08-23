@@ -42,7 +42,6 @@ import { cn } from "@/lib/utils";
 
 import { ArtifactFileList } from "../artifacts/artifact-file-list";
 import { CopyButton } from "../copy-button";
-import { StreamingIndicator } from "../streaming-indicator";
 import { Tooltip } from "../tooltip";
 
 import { MarkdownContent } from "./markdown-content";

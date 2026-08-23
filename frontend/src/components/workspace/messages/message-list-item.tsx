@@ -243,7 +243,7 @@ function MessageContent_({
       clientTurnDurations.set(`${threadId}:${message.id}`, rawTurnDuration);
       setCachedDuration(rawTurnDuration);
     }
-  }, [rawTurnDuration, message.id]);
+  }, [rawTurnDuration, message.id, threadId]);
 
   const handleDurationChange = useCallback(
     (d: number | undefined) => {
@@ -252,7 +252,7 @@ function MessageContent_({
         setCachedDuration(d);
       }
     },
-    [message.id],
+    [message.id, threadId],
   );
 
   useEffect(() => {
