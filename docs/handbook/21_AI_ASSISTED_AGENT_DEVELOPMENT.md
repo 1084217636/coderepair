@@ -27,7 +27,7 @@ AI 可以加快代码定位、测试草拟和文档整理，但不能替代对�
 
 排查顺序应是：先确认失败 Job，再找第一个失败 Step，最后定位第一条有文件和行号的错误。不要被后续级联日志干扰，也不要因为本地测试通过就否认 CI 的环境差异。
 
-消除前端 warning 后的下一次运行又在测试开始前失败：`corepack prepare pnpm` 的下载解析触发 Node `undici` 断言。由于失败发生在依赖引导步骤，不能归因于刚修改的 React 代码。最终改用 `pnpm/action-setup` 固定 pnpm 版本，并让 `setup-node` 管理 pnpm 缓存。这个过程体现了“先看失败阶段，再判断代码是否相关”，也比盲目重跑更容易留下稳定门禁。
+消除前端 warning 后的下一次运行又在测试开始前失败：`corepack prepare pnpm` 的下载解析触发 Node `undici` 断言。由于失败发生在依赖引导步骤，不能归因于刚修改的 React 代码。最终改用 `pnpm/action-setup` 固定 pnpm 版本，并让 `setup-node` 管理 pnpm 缓存；同时把仍使用 Node 20 运行时的 `upload-artifact@v4` 升到 Node 24 版本。这个过程体现了“先看失败阶段，再判断代码是否相关”，也比盲目重跑更容易留下稳定门禁。
 
 ### 3. 工作流没有覆盖功能分支
 
