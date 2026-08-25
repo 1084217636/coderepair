@@ -27,6 +27,14 @@ browser POST
 
 ## 本章代码阅读任务
 
+### 按 HTTP 生命周期分三次问
+
+先问 Router，再问 Service，最后问清理测试：
+
+> 我只会基本编程语法，现在只学习【当前文件和函数】。请从一次浏览器请求开始，先说明该函数处于请求生命周期哪一步，再按 Python 代码块解释参数类型、`async`/`await`、创建的对象、后台任务、事件流和异常处理。遇到 FastAPI 依赖注入、coroutine、SSE 或取消时必须用当前变量举例。最后分别推演成功、模型异常、浏览器断开，并写出看到什么程度就停和 3 道带答案的自测题。
+
+一次只追一层，不要同时展开 ASGI、LangGraph 和前端内部实现。
+
 - 阅读顺序：`backend/app/gateway/routers/thread_runs.py` 的流式路由 → `backend/app/gateway/services.py` 的 `start_run`/`sse_consumer` → `backend/tests/test_gateway_runtime_cleanup.py`。
 - 看到什么程度：能指出请求校验、后台任务、事件桥和断开清理分别在哪一层。
 - 暂不要求：不研究 ASGI Server 内核或 TCP 拥塞控制。

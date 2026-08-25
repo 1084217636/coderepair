@@ -93,7 +93,15 @@ AI 可以加快代码定位、测试草拟和文档整理，但不能替代对�
 
 ## 本章代码阅读任务
 
-- 阅读顺序：先读 `.github/workflows/code-change-platform.yml` 的实际门禁，再读 `backend/src/deerflow/code_change/agent_patch.py` 和 `backend/src/deerflow/anchored_branch/`，最后对照 `backend/tests/code_change/`、评测脚本与前端 Code Change Console。
+### 每次只复盘一个工程判断
+
+CI、Patch Agent、Anchored Branch、测试、评测和前端控制台分别问：
+
+> 我现在只复盘【当前文件或功能】。请先说明 AI 在开发过程中可能提供了什么，以及最终必须由我判断和验证什么。然后按真实代码分段解释实现、失败修复、测试和 CI 证据，明确概率性 Agent 输出在哪里结束、确定性校验在哪里开始。最后给出一份不夸大的面试表达、一次故障复盘、仍存在的风险和 3 道带答案的自测题。
+
+实际源码位于 `backend/packages/harness/deerflow/`，不要使用不存在的 `backend/src/deerflow/` 路径。
+
+- 阅读顺序：先读 `.github/workflows/code-change-platform.yml` 的实际门禁，再读 `backend/packages/harness/deerflow/code_change/agent_patch.py` 和 `backend/packages/harness/deerflow/anchored_branch/`，最后对照 `backend/tests/code_change/`、评测脚本与前端 Code Change Console。
 - 看到什么程度：能指出概率性决策在哪里结束、确定性校验在哪里开始，并为每条简历表述找到实现、测试或 CI 证据。
 - 暂不要求：不要求把固定评测结果外推为线上收益，也不要求背诵未实际接入的生产组件。
 - 验收动作：完成三篇真实故障复盘，闭卷讲清一次 CI 修复和一次 Agent 安全取舍，并能说明仍然存在的风险。

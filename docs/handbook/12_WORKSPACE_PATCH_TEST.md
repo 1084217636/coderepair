@@ -27,7 +27,15 @@ HTTP 只接收 `test_profile`，命令由服务端配置映射成参数数组。
 
 ## 本章代码阅读任务
 
-- 阅读顺序：`workspace.py` → `patcher.py` → `test_profiles.py` → `test_runner.py` → 对应四组测试。
+### Workspace、Patch、Profile、Runner 分四次问
+
+一次只学习一个确定性边界：
+
+> 我现在只学习【当前文件】。请先说明它接收 Agent 候选 Patch 之后负责哪一步，再按类和函数解释基线 commit、临时目录、staging、路径校验、patch check/apply、测试命令白名单、最小环境变量、timeout 和进程组清理。对每个拒绝条件给一个恶意或错误输入，并指出对应异常与测试。最后画出调用前后的文件系统状态，说明当前隔离仍缺什么，并给 3 道带答案的自测题。
+
+不要用“沙箱安全”概括，必须说出当前真实限制。
+
+- 阅读顺序：`backend/packages/harness/deerflow/code_change/workspace.py` → `backend/packages/harness/deerflow/code_change/patcher.py` → `backend/packages/harness/deerflow/code_change/test_profiles.py` → `backend/packages/harness/deerflow/code_change/test_runner.py` → `backend/tests/code_change/` 中对应测试。
 - 看到什么程度：能讲固定 commit、staging 发布、两阶段 Patch、命令白名单、最小 env 和 timeout kill。
 - 暂不要求：不实现容器编排或远程执行器。
 - 验收动作：分别定位拒绝 path escape、`.git`、shell operator、Python 前缀伪装、Secret 继承和超时孙进程的测试。

@@ -31,7 +31,15 @@ Thread 是会话身份，Run 是一次执行，Checkpoint 是 LangGraph 状态�
 
 ## 本章代码阅读任务
 
-- 阅读顺序：根 `AGENTS.md` → `backend/AGENTS.md` 的 Harness/App 与 Runtime → `frontend/src/core/threads/hooks.ts` → `thread_runs.py` → `services.py`。
+### 一次只跨一个系统边界
+
+依次问根规则、前端调用、Router、Service。每次复制：
+
+> 我正在学习 DeerFlow 总体结构，现在只看【当前文件和函数】。请先把它放进“浏览器、Gateway、Agent Runtime、模型/Tool、事件返回”这张图，再按代码块解释调用者、输入、创建的 Thread/Run/Event 对象、调用下一层的位置和失败返回。第一次出现 Thread、Run、Checkpoint、Message、StreamEvent 时必须对比生命周期。最后给出本段短链路、暂不需要展开的下一层和 3 道带答案的自测题。
+
+不要一次追完整仓库；每次只跨过当前文件负责的一个边界。
+
+- 阅读顺序：根 `AGENTS.md` → `backend/AGENTS.md` 的 Harness/App 与 Runtime → `frontend/src/core/threads/hooks.ts` → `backend/app/gateway/routers/thread_runs.py` → `backend/app/gateway/services.py`。
 - 看到什么程度：能画出服务边界，并区分 Thread、Run、Checkpoint、Message 和 StreamEvent。
 - 暂不要求：不背所有 Router、Middleware 和存储实现。
 - 验收动作：从前端调用追到 `sse_consumer`，再指出 Anchored Branch 复用了哪几个入口。

@@ -23,7 +23,15 @@ Patch Agent 当前用同一个 Agent factory，但没有配置持久化 Checkpoi
 
 ## 本章代码阅读任务
 
-- 阅读顺序：`backend/packages/harness/deerflow/agents/factory.py` → `agents/thread_state.py` → `runtime/checkpointer/` → `agents/middlewares/dangling_tool_call_middleware.py`。
+### 按 Agent 状态变化逐个问
+
+分别学习 factory、state、checkpointer、dangling Tool middleware：
+
+> 我现在只学习【当前文件或目录】。请先说明它解决 Agent 循环中的哪个状态问题，然后按类、函数和代码块解释 state 从哪里来、字段如何合并、node/edge 怎样选择下一步、何时保存 checkpoint 或补 ToolMessage。请画出调用前 state 和调用后 state，并推演一次正常 Tool、Tool 异常、进程中断。最后明确 Patch Agent 是否实际启用持久化 checkpointer，并给 3 道带答案的自测题。
+
+回答必须区分 LangGraph 通用能力和 CodeRepair 当前接线。
+
+- 阅读顺序：`backend/packages/harness/deerflow/agents/factory.py` → `backend/packages/harness/deerflow/agents/thread_state.py` → `backend/packages/harness/deerflow/runtime/checkpointer/` → `backend/packages/harness/deerflow/agents/middlewares/dangling_tool_call_middleware.py`。
 - 看到什么程度：能解释 node、state、reducer、conditional edge、checkpoint 各解决什么问题。
 - 暂不要求：不手写完整 LangGraph Runtime 或研究序列化格式。
 - 验收动作：画出一次 Tool call 成功、Tool exception、进程在 Tool 返回前中断三种状态变化。

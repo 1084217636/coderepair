@@ -20,6 +20,14 @@ DeerFlow 请求运行时
 
 ## 本章代码阅读任务
 
+### 分三次向 AI 提问
+
+不要让 AI 一次解释两个目录。按顺序分别问 `README_zh.md`、`code_change/`、`anchored_branch/`：
+
+> 我第一次学习 CodeRepair，目前只看【当前文件或目录】。假设我不了解 DeerFlow 和 Agent，请先告诉我它在项目主线中的位置，再按目录入口、公开对象和调用关系分段解释。每个名词第一次出现时给出本项目中的具体例子，并明确这是上游 DeerFlow、我的二次开发，还是尚未实现。不要只给路径或名词表。最后写出看到什么程度就停，并给 3 道带答案的自测题。
+
+一次问完一个范围并能复述后，再进入下一个。
+
 - 阅读顺序：先看 `README_zh.md` 顶部，再看 `docs/handbook/README.md`，最后浏览 `backend/packages/harness/deerflow/code_change/` 与 `backend/packages/harness/deerflow/anchored_branch/`。
 - 看到什么程度：能用两句话区分上游能力和个人新增能力。
 - 暂不要求：不追 LangGraph、Checkpointer 或 SandboxProvider 的内部实现。

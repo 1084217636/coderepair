@@ -22,7 +22,15 @@ Task 持久记录 requirement、source commit、Patch、context、test、attempt
 
 ## 本章代码阅读任务
 
-- 阅读顺序：`anchored_branch/store.py` 的 Decision 方法与 Router apply → `code_change/models.py` → `state_machine.py` → `worker.py` → `review.py`。
+### Branch Decision 与 Code Review 分开问
+
+先逐个问 Branch store/apply，再问 Code Change model/state/worker/review：
+
+> 我现在只学习【当前决策或状态函数】。请先说明用户在什么状态下触发它，再按请求字段、前置状态检查、持久化写入、幂等判断、后续副作用和响应逐段解释。画出调用前后状态机，并推演重复请求、旧 Worker 写回、request changes 后重提。若与另一套 human gate 比较，只在结尾列出差异，不要混讲代码。最后给 3 道带答案的自测题。
+
+回答必须区分“保存决定”和“执行决定”。
+
+- 阅读顺序：`backend/packages/harness/deerflow/anchored_branch/store.py` 的 Decision 方法与 `backend/app/gateway/routers/anchored_branch.py` 的 apply → `backend/packages/harness/deerflow/code_change/models.py` → `backend/packages/harness/deerflow/code_change/state_machine.py` → `backend/packages/harness/deerflow/code_change/worker.py` → `backend/packages/harness/deerflow/code_change/review.py`。
 - 看到什么程度：能比较两个 human gate 的输入、持久化位置、幂等方式和后续副作用。
 - 暂不要求：不设计跨服务审批平台或多机队列。
 - 验收动作：画出重复 Apply、旧 Worker 恢复写回、request changes 后重提 Patch 三种状态变化。

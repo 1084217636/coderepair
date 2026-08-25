@@ -59,7 +59,15 @@ UI selection
 
 ## 本章代码阅读任务
 
-- 阅读顺序：按三条链逐个打开符号，最后回 `backend/app/gateway/app.py` 确认 Router 注册和 `lead_agent/agent.py` 的 Middleware 接入。
+### 三条主链必须分开追
+
+一次只选择 Code Change、Anchored Branch 或通用 DeerFlow Run 中的一条：
+
+> 我现在只追【主链名称】。请从用户动作开始，按当前仓库真实调用顺序逐文件、逐函数解释。每经过 HTTP、后台任务、模型、Tool、文件系统、测试、持久化、stream 或人工门禁，都要说明输入对象和输出对象怎样变化；失败沿哪条路径返回；对应测试在哪里。最后给出一版白板短链、五个必须记住的稳定符号、当前能力边界和 5 道带答案的面试追问。
+
+一条链能闭卷画出后再追下一条，不要同时打开三个系统。
+
+- 阅读顺序：按三条链逐个打开符号，最后回 `backend/app/gateway/app.py` 确认 Router 注册和 `backend/packages/harness/deerflow/agents/lead_agent/agent.py` 的 Middleware 接入。
 - 看到什么程度：能在白板上标出模型边界、确定性边界、持久化点、stream、人工门禁和安全检查。
 - 暂不要求：不背行号，以稳定符号名为准。
 - 验收动作：随机抽取五个符号，在 30 秒内说明输入、输出、调用者、失败分支和对应测试。

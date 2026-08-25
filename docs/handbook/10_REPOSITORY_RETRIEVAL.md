@@ -23,7 +23,15 @@ registered repo / pinned workspace
 
 ## 本章代码阅读任务
 
-- 阅读顺序：`backend/packages/harness/deerflow/code_change/repo_scanner.py` → `context_retriever.py` → `agent_patch.py` 的 search/read Tool → `test_repo_scanner.py`。
+### 扫描、检索、Tool、测试分开问
+
+按阅读顺序一次只问一个文件：
+
+> 我正在学习 CodeRepair 仓库检索，现在只看【当前文件和函数】。请先说明它位于“登记仓库到 Agent 看到代码”的哪一步，再按代码块解释输入路径、过滤规则、索引结构、query 分词、评分、top-k、读取行数限制和返回格式。用一个中文修复需求手算至少两个文件为什么得分不同，并指出路径逃逸、二进制文件、超长文件怎样处理。最后说明当前方法的召回边界和 3 道带答案的自测题。
+
+不要提前引入未实现的向量库或 AST 索引。
+
+- 阅读顺序：`backend/packages/harness/deerflow/code_change/repo_scanner.py` → `backend/packages/harness/deerflow/code_change/context_retriever.py` → `backend/packages/harness/deerflow/code_change/agent_patch.py` 的 search/read Tool → `backend/tests/code_change/test_repo_scanner.py`。
 - 看到什么程度：能解释扫描过滤、分词、排名、top-k 与 bounded read 的边界。
 - 暂不要求：不实现向量库或 AST 索引。
 - 验收动作：增加一个中文需求测试，检查目标文件是否进入检索结果，并分析一次误召回。

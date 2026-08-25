@@ -26,7 +26,15 @@ AI 工程面试常给一个现象让你定位，而不是让你背架构。调�
 
 ## 本章代码阅读任务
 
-- 阅读顺序：`runtime/runs/manager.py` 与 `stream_bridge/` → `llm_error_handling_middleware.py` → `loop_detection_middleware.py` → `code_change/worker.py` 的失败分支与 heartbeat。
+### 每次从一个用户现象开始
+
+Run manager、stream bridge、错误 Middleware、loop detection、Worker heartbeat 分开问：
+
+> 我遇到的用户现象是【具体故障现象】，现在只检查【当前文件和函数】。请先判断这一层为何可能导致现象，再按代码解释 correlation id、状态、事件、异常捕获、超时或 heartbeat 如何变化。给出正常路径和故障路径的日志/状态差异，说明下一步该查什么而不是一次扫全仓库。最后生成一份五步排障 runbook、当前层排除条件和 3 道带答案的自测题。
+
+没有证据时不要直接把问题归因于模型。
+
+- 阅读顺序：`backend/packages/harness/deerflow/runtime/runs/manager.py` 与 `backend/packages/harness/deerflow/runtime/stream_bridge/` → `backend/packages/harness/deerflow/agents/middlewares/llm_error_handling_middleware.py` → `backend/packages/harness/deerflow/agents/middlewares/loop_detection_middleware.py` → `backend/packages/harness/deerflow/code_change/worker.py` 的失败分支与 heartbeat。
 - 看到什么程度：给一个用户现象，能先定位层次，再找 correlation ID、状态、事件、Tool trace 和 artifact。
 - 暂不要求：不部署集中日志或 tracing 平台。
 - 验收动作：任选“Agent 不 submit Patch”和“Branch 无输出”各写一份五步排障 runbook。

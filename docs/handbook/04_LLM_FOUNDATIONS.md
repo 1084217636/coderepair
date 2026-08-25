@@ -25,7 +25,15 @@ CodeRepair 不相信模型文本中的“已经修改、已经测试”，而只
 
 ## 本章代码阅读任务
 
-- 阅读顺序：`backend/packages/harness/deerflow/models/` → `agents/lead_agent/prompt.py` → `agents/middlewares/token_usage_middleware.py` 与 `token_budget_middleware.py`。
+### 模型、Prompt、预算分开问
+
+把阅读顺序拆成三次：`backend/packages/harness/deerflow/models/`、`backend/packages/harness/deerflow/agents/lead_agent/prompt.py`、两个 token middleware：
+
+> 我第一次学习 LLM 工程，现在只看【当前文件或目录】。请先说明它控制模型调用的哪一部分，再逐段解释配置或类怎样创建、接收哪些消息、产生什么对象、何时被 Agent 调用。出现 System/Human/AI/Tool message、context window、token usage 或 budget 时，用本项目一次 Tool 调用举例。最后区分格式约束与安全边界，说明本文件不负责什么，并给 3 道带答案的自测题。
+
+不要求解释 Transformer 数学，只要求能把代码中的输入和输出说清楚。
+
+- 阅读顺序：`backend/packages/harness/deerflow/models/` → `backend/packages/harness/deerflow/agents/lead_agent/prompt.py` → `backend/packages/harness/deerflow/agents/middlewares/token_usage_middleware.py` 与 `backend/packages/harness/deerflow/agents/middlewares/token_budget_middleware.py`。
 - 看到什么程度：能指出模型配置、system prompt、消息列表和 token 预算在不同层的职责。
 - 暂不要求：不学习 Transformer 数学推导、训练或 GPU 推理优化。
 - 验收动作：拿一个 Tool 调用例子，写出模型看到的消息顺序以及下一轮为什么能读到 Tool 结果。

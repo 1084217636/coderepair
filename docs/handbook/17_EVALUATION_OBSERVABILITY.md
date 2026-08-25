@@ -24,7 +24,15 @@
 
 ## 本章代码阅读任务
 
-- 阅读顺序：`code_change/evaluation.py` → `anchored_branch/benchmark.py` → `token_usage_middleware.py` → `.github/workflows/code-change-platform.yml`。
+### 每次只核对一个指标来源
+
+两个评测、token middleware、CI 分开问：
+
+> 我现在只学习【当前指标或文件】。请先说明这个数字要回答什么问题，再沿代码找到样本、固定变量、执行动作、原始记录、聚合公式和输出字段。用一条样本手算，并说明失败如何分类。然后列出这个指标能支持的结论和绝对不能外推的结论。若当前是 CI，请逐个解释门禁命令验证什么。最后给 3 道带答案的自测题。
+
+任何百分比都必须同时说出样本和分母。
+
+- 阅读顺序：`backend/packages/harness/deerflow/code_change/evaluation.py` → `backend/packages/harness/deerflow/anchored_branch/benchmark.py` → `backend/packages/harness/deerflow/agents/middlewares/token_usage_middleware.py` → `.github/workflows/code-change-platform.yml`。
 - 看到什么程度：任何指标都能回答样本是什么、变量是否固定、数据从哪来、没有测什么。
 - 暂不要求：不购买在线模型额度或搭建 LangSmith 服务。
 - 验收动作：设计 10 个小仓库任务的 Agent eval schema，至少记录 seed/模型、retrieval、trajectory、patch、test、token、latency 和 failure category。

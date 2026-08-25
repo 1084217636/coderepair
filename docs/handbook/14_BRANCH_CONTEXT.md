@@ -22,7 +22,15 @@ Anchor 是用户显式选中的讨论对象，Current Question 是当前意图�
 
 ## 本章代码阅读任务
 
-- 阅读顺序：`anchored_branch/context.py` 的 `read_code_context` → `BranchContextBuilder.build` → `BranchContext.to_prompt` → Router 的 `stream_branch_run` → `anchored_branch/middleware.py`。
+### 按 Context 构造顺序逐段问
+
+依次问代码读取、`build`、`to_prompt`、stream Router、Middleware：
+
+> 我现在只学习【当前函数】。请先说明它接收哪些 Anchor、Question、History、Code 输入，再按代码块解释预算计算、保留顺序、裁剪条件、truncated 标记和输出格式。给一个带具体字符预算的小例子，手算每部分保留多少；再说明输出怎样进入模型，失败或路径非法时怎样处理。最后明确必须原样保留什么、当前估算不精确在哪里，并给 3 道带答案的自测题。
+
+每次只学习 Context 流水线的一步。
+
+- 阅读顺序：`backend/packages/harness/deerflow/anchored_branch/context.py` 的 `read_code_context` → `BranchContextBuilder.build` → `BranchContext.to_prompt` → `backend/app/gateway/routers/anchored_branch.py` 的 `stream_branch_run` → `backend/packages/harness/deerflow/anchored_branch/middleware.py`。
 - 看到什么程度：能手算固定预算下的保留顺序，并解释 prompt 进入模型前经过哪里。
 - 暂不要求：不实现模型 tokenizer、语义压缩或 reranker。
 - 验收动作：构造超长 history/code，验证 Anchor 与 Question 原样保留、旧 history 被裁剪且 `truncated=True`。

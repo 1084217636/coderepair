@@ -20,6 +20,14 @@ Project/Task、claim/lease 与报告仍是当前实现的一部分，但它们�
 
 ## 本章代码阅读任务
 
+### 分文件确认项目边界
+
+先单独问 `backend/AGENTS.md`，再分别问两个 `__init__.py`：
+
+> 我正在学习 CodeRepair 项目边界，现在只看【当前文件】。请先解释这个文件为什么能证明模块职责，再逐段说明导出的类/函数、允许的依赖方向、调用者和没有实现的能力。凡是上游 DeerFlow 已有能力和本项目新增能力都要分开列出。最后把本文件能支持的简历表述改成准确口径，并给 3 道带答案的自测题。
+
+不要从目录名推测贡献，必须以当前代码和导出符号为准。
+
 - 阅读顺序：读 `backend/AGENTS.md` 的 Code-change invariants，再看 `backend/packages/harness/deerflow/code_change/__init__.py` 和 `backend/packages/harness/deerflow/anchored_branch/__init__.py`。
 - 看到什么程度：能把每个简历关键词归到“上游”“新增”或“未完成”。
 - 暂不要求：不背所有状态值和 API 路径。

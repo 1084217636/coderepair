@@ -27,7 +27,15 @@ static system prompt
 
 ## 本章代码阅读任务
 
-- 阅读顺序：`agents/lead_agent/agent.py` 的 Middleware 组装 → `input_sanitization_middleware.py` → `tool_output_budget_middleware.py` → `summarization_middleware.py` → `anchored_branch/middleware.py`。
+### 一次只学一个 Middleware
+
+先问 Agent 怎样组装 Middleware，然后对每个 Middleware 单独使用下面问题：
+
+> 我现在只学习【当前 Middleware 类】。请先说明它在模型调用或 Tool 调用的前后哪个时点执行，再按方法逐段解释接收的 request/state、读取的字段、触发条件、产生的修改和交给下一层的对象。给出执行前与执行后的消息或上下文示例，并说明它和前后 Middleware 的顺序依赖、失败或误裁剪风险。最后写出对应测试思路、看到什么程度就停和 3 道带答案的自测题。
+
+每次回答只展开一个 Middleware，不把所有上下文工程概念揉在一起。
+
+- 阅读顺序：`backend/packages/harness/deerflow/agents/lead_agent/agent.py` 的 Middleware 组装 → `backend/packages/harness/deerflow/agents/middlewares/input_sanitization_middleware.py` → `backend/packages/harness/deerflow/agents/middlewares/tool_output_budget_middleware.py` → `backend/packages/harness/deerflow/agents/middlewares/summarization_middleware.py` → `backend/packages/harness/deerflow/anchored_branch/middleware.py`。
 - 看到什么程度：能解释至少五个 Middleware 的触发点、输入、输出和顺序依赖。
 - 暂不要求：不背所有 Middleware 类名。
 - 验收动作：给“超长 Tool 输出导致当前问题消失”设计一条 Middleware 处理链和回归测试。

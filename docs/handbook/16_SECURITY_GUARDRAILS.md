@@ -21,7 +21,15 @@ Guardrail 在动作前根据策略允许、拒绝或修改请求；Sandbox 假�
 
 ## 本章代码阅读任务
 
-- 阅读顺序：`input_sanitization_middleware.py` → `sandbox_audit_middleware.py` → `backend/app/gateway/code_change_worker_auth.py` → `code_change/patcher.py` → `test_runner.py`。
+### 每次只分析一种攻击面
+
+Prompt Injection、审计、Worker Auth、Patch、测试进程分别问：
+
+> 我现在只分析【当前文件对应的攻击面】。请先列出 asset、attacker 和 entry point，再按代码块解释校验输入、允许范围、拒绝分支、日志/异常和测试。给出一个能被拦截的具体攻击输入，再给出一个当前防线仍不能完全解决的风险。不要把 Middleware、schema 或文件路径检查单独说成完整沙箱。最后给出面试短答和 3 道带答案的自测题。
+
+一次只完成一条 threat model，再进入下一层防线。
+
+- 阅读顺序：`backend/packages/harness/deerflow/agents/middlewares/input_sanitization_middleware.py` → `backend/packages/harness/deerflow/agents/middlewares/sandbox_audit_middleware.py` → `backend/app/gateway/code_change_worker_auth.py` → `backend/packages/harness/deerflow/code_change/patcher.py` → `backend/packages/harness/deerflow/code_change/test_runner.py`。
 - 看到什么程度：能为 Prompt Injection、repo escape、任意命令、Secret 泄漏、超时子进程各指出至少一条真实防线和残余风险。
 - 暂不要求：不实现 seccomp、网络策略或完整容器 Sandbox。
 - 验收动作：写一份威胁模型，包含 asset、attacker、entry point、mitigation、residual risk，而不是只列安全名词。

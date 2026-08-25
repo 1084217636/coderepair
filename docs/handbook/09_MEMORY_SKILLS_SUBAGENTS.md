@@ -22,7 +22,15 @@ CodeRepair 的 Patch Agent 是一个专用受限 Agent，不等于通用 Sub-Age
 
 ## 本章代码阅读任务
 
-- 阅读顺序：`agents/memory/storage.py` 与 `updater.py` → `skills/types.py` 与 `skill_activation_middleware.py` → `todo_middleware.py` → `subagents/executor.py` 与 `registry.py`。
+### 四种能力分四组问
+
+Memory、Skill、Todo、Sub-Agent 必须分开学习：
+
+> 我现在只学习【Memory/Skill/Todo/Sub-Agent 中的一项及当前文件】。请先用一个真实使用场景说明它保存或执行什么，再按数据模型、创建入口、读取入口、生命周期和清理方式逐段解释。明确数据放在哪里、未来哪一轮会再次看到、与 Checkpoint 有什么不同。若涉及并发委派，还要说明输入隔离、结果汇总和不适合并行的情况。最后给一张对比表中的当前一列和 3 道带答案的自测题。
+
+不能把四种对象都称为“记忆”。
+
+- 阅读顺序：`backend/packages/harness/deerflow/agents/memory/storage.py` 与 `backend/packages/harness/deerflow/agents/memory/updater.py` → `backend/packages/harness/deerflow/skills/types.py` 与 `backend/packages/harness/deerflow/agents/middlewares/skill_activation_middleware.py` → `backend/packages/harness/deerflow/agents/middlewares/todo_middleware.py` → `backend/packages/harness/deerflow/subagents/executor.py` 与 `backend/packages/harness/deerflow/subagents/registry.py`。
 - 看到什么程度：能用数据生命周期区分 Memory、Checkpoint、Skill、Todo 和 Sub-Agent result。
 - 暂不要求：不研究所有内置 Skill 或 Sub-Agent prompt。
 - 验收动作：给“分析三个互不依赖模块”设计一次合理委派，再解释为何“按顺序改同一文件三次”不适合并行。

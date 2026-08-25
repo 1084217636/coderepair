@@ -22,7 +22,15 @@ Tool 是 Agent 与确定性世界之间的接口。好的 Tool 不是“给模�
 
 ## 本章代码阅读任务
 
-- 阅读顺序：`backend/packages/harness/deerflow/code_change/agent_patch.py` 的 `build_code_change_tools` → `agents/middlewares/tool_error_handling_middleware.py` → `tool_output_budget_middleware.py`。
+### 每个 Tool 单独问，再问 Middleware
+
+`search`、`read_file`、`submit_patch` 分三次问；两个 Middleware 再各问一次：
+
+> 我现在只学习【当前 Tool 或 Middleware】。请先用 Agent 的一次决策说明它为什么存在，再按定义、schema、闭包依赖、参数校验、实际执行和返回值逐段解释。列出允许输入、拒绝输入、权限边界、是否有副作用和对应测试。若是 Middleware，要说明它包在 Tool 调用前还是后、怎样改变 ToolMessage。最后说明模型能做什么、Worker 才能做什么，并给 3 道带答案的自测题。
+
+不要把 schema 当成完整授权，也不要跳到万能 shell。
+
+- 阅读顺序：`backend/packages/harness/deerflow/code_change/agent_patch.py` 的 `build_code_change_tools` → `backend/packages/harness/deerflow/agents/middlewares/tool_error_handling_middleware.py` → `backend/packages/harness/deerflow/agents/middlewares/tool_output_budget_middleware.py`。
 - 看到什么程度：能为三个 Tool 写出输入约束、权限、输出和负向用例。
 - 暂不要求：不学习所有 MCP 协议细节。
 - 验收动作：设计一个“创建 PR”Tool schema，并说明为什么它必须比 search Tool 多确认和幂等字段。

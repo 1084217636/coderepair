@@ -53,6 +53,12 @@ def validate_learning_contract(path: Path) -> list[str]:
                     f"{path.relative_to(REPO_ROOT)}: 阅读任务缺少“{label}”说明"
                 )
 
+        if "> 我" not in reading_block or "带答案" not in reading_block:
+            errors.append(
+                f"{path.relative_to(REPO_ROOT)}: 阅读任务缺少可复制的单问题 AI 提问，"
+                "或没有要求在回答中附带答案"
+            )
+
     if positions[1] >= 0 and positions[2] >= 0:
         questions = re.findall(r"^\d+\.\s+", text[positions[1] : positions[2]], re.M)
         answers = re.findall(r"^\d+\.\s+", text[positions[2] :], re.M)

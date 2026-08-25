@@ -23,6 +23,14 @@ PYTHONPATH=. uv run python -m deerflow.anchored_branch.benchmark --output ../art
 
 ## 本章代码阅读任务
 
+### 两个评测脚本分开问
+
+第一次只问 `evaluation.py`，第二次只问 `benchmark.py`：
+
+> 我现在只学习【当前评测文件】。请先说明它想回答哪个问题，再按入口函数、样本构造、执行循环、指标计算和结果写出分段解释。每个指标都要说明分子、分母、数据来源和没有测量的内容；再结合一条固定样本手算结果。最后给出运行命令、输出文件中应检查的字段、不能写进简历的推论，以及 3 道带答案的自测题。
+
+不能把固定 Patch 评测说成在线 Agent 修复率，也不能把字符估算说成模型账单 token。
+
 - 阅读顺序：看 `backend/packages/harness/deerflow/code_change/evaluation.py` 的 `fixed_cases`，再看 `backend/packages/harness/deerflow/anchored_branch/benchmark.py` 的 `run_benchmark`。
 - 看到什么程度：能准确解释两个 Benchmark 的输入、输出与没有测量的指标。
 - 暂不要求：不配置真实模型，不启动完整 Docker 栈。

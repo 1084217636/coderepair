@@ -21,7 +21,15 @@ requirement + pinned workspace
 
 ## 本章代码阅读任务
 
-- 阅读顺序：`agent_patch.py` 的 `PatchCapture`、`build_code_change_tools`、`create_code_change_agent`、`generate_patch_with_agent` → `worker.py` 的 `_generate_agent_patch` 与 `execute_task`。
+### 沿 Patch 产生过程分段问
+
+依次问 `PatchCapture`、三个 Tool、Agent factory、`generate_patch_with_agent`、Worker 汇合点：
+
+> 我现在只学习【当前类或函数】。请先说明 patch_mode=agent 走到这里之前发生了什么，再按实际代码解释输入对象、闭包保存的状态、模型或 Tool 调用、Patch 怎样被捕获、错误怎样返回、下一步由谁处理。展示一次成功 ToolMessage 序列和一次未调用 submit Tool 的失败序列。最后明确这里是否修改工作区、是否运行测试、是否创建 PR，并给 3 道带答案的自测题。
+
+每次只推进一段，直到 Agent 路径和 external Patch 路径在 Worker 汇合。
+
+- 阅读顺序：`backend/packages/harness/deerflow/code_change/agent_patch.py` 的 `PatchCapture`、`build_code_change_tools`、`create_code_change_agent`、`generate_patch_with_agent` → `backend/packages/harness/deerflow/code_change/worker.py` 的 `_generate_agent_patch` 与 `execute_task`。
 - 看到什么程度：能从 `patch_mode=agent` 追到 typed submit，再指出与 external 模式的汇合点。
 - 暂不要求：不追具体模型 provider SDK。
 - 验收动作：运行 `test_real_deerflow_agent_graph_submits_candidate_patch` 和“未调用 submit Tool”失败测试，解释 ToolMessage 序列。
