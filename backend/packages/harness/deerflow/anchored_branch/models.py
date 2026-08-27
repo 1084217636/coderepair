@@ -7,8 +7,13 @@ from typing import Any
 
 class BranchStatus(StrEnum):
     ACTIVE = "ACTIVE"
-    APPLIED = "APPLIED"
-    ARCHIVED = "ARCHIVED"
+    CLOSED = "CLOSED"
+
+
+class BranchContextStrategy(StrEnum):
+    FULL_HISTORY = "FULL_HISTORY"
+    ANCHOR_ONLY = "ANCHOR_ONLY"
+    ANCHORED_CONTEXT = "ANCHORED_CONTEXT"
 
 
 @dataclass(slots=True)
@@ -37,45 +42,35 @@ class AnchorSelection:
 
 
 @dataclass(slots=True)
-class BranchDecision:
-    """Structured human decision; it is intentionally not a code mutation."""
-
-    decision_id: str
-    branch_id: str
-    summary: str
-    actions: list[str] = field(default_factory=list)
-    constraints: list[str] = field(default_factory=list)
-    rationale: str = ""
-    applied: bool = False
-    applied_at: str = ""
-
-    def to_dict(self) -> dict[str, Any]:
-        return asdict(self)
-
-
-@dataclass(slots=True)
 class BranchRecord:
     branch_id: str
     main_thread_id: str
     child_thread_id: str
     owner_id: str
     anchor: AnchorSelection
-    root_summary: str = ""
+    main_task_summary: str = ""
+    relevant_main_context: list[str] = field(default_factory=list)
+    main_history: list[str] = field(default_factory=list)
+    context_strategy: BranchContextStrategy = BranchContextStrategy.ANCHORED_CONTEXT
+    token_budget: int = 6_000
     status: BranchStatus = BranchStatus.ACTIVE
     created_at: str = ""
     updated_at: str = ""
-    decision: BranchDecision | None = None
+    closed_at: str = ""
 
     def to_dict(self) -> dict[str, Any]:
         data = asdict(self)
         data["status"] = str(self.status)
+        data["context_strategy"] = str(self.context_strategy)
         return data
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> BranchRecord:
         payload = dict(data)
-        payload["status"] = BranchStatus(payload.get("status", BranchStatus.ACTIVE))
+        legacy_status = payload.get("status", BranchStatus.ACTIVE)
+        payload["status"] = BranchStatus.CLOSED if legacy_status in {"APPLIED", "ARCHIVED"} else BranchStatus(legacy_status)
         payload["anchor"] = AnchorSelection(**payload["anchor"])
-        if payload.get("decision"):
-            payload["decision"] = BranchDecision(**payload["decision"])
+        payload["main_task_summary"] = payload.pop("root_summary", payload.get("main_task_summary", ""))
+        payload.pop("decision", None)
+        payload["context_strategy"] = BranchContextStrategy(payload.get("context_strategy", BranchContextStrategy.ANCHORED_CONTEXT))
         return cls(**payload)

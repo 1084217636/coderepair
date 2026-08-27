@@ -1,11 +1,7 @@
 import { fetch } from "@/core/api/fetcher";
 import { getBackendBaseURL } from "@/core/config";
 
-import type {
-  AnchorSelection,
-  BranchDecision,
-  BranchRecord,
-} from "./types";
+import type { AnchorSelection, BranchMessage, BranchRecord } from "./types";
 
 const base = () => `${getBackendBaseURL()}/api/anchored-branches`;
 
@@ -39,29 +35,27 @@ export async function createAnchoredBranch(
 export async function listAnchoredBranches(
   mainThreadId: string,
 ): Promise<BranchRecord[]> {
-  return json(await fetch(`${base()}/main/${encodeURIComponent(mainThreadId)}`));
-}
-
-export async function createBranchDecision(
-  branchId: string,
-  input: Pick<BranchDecision, "summary" | "actions" | "constraints" | "rationale">,
-): Promise<BranchDecision> {
   return json(
-    await fetch(`${base()}/${encodeURIComponent(branchId)}/decision`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(input),
-    }),
+    await fetch(`${base()}/main/${encodeURIComponent(mainThreadId)}`),
   );
 }
 
-export async function applyBranchDecision(branchId: string): Promise<BranchRecord> {
-  const body = await json<{ branch: BranchRecord }>(
-    await fetch(`${base()}/${encodeURIComponent(branchId)}/apply`, {
+export async function getAnchoredBranchMessages(
+  branchId: string,
+): Promise<BranchMessage[]> {
+  return json(
+    await fetch(`${base()}/${encodeURIComponent(branchId)}/messages`),
+  );
+}
+
+export async function closeAnchoredBranch(
+  branchId: string,
+): Promise<BranchRecord> {
+  return json(
+    await fetch(`${base()}/${encodeURIComponent(branchId)}/close`, {
       method: "POST",
     }),
   );
-  return body.branch;
 }
 
 function textFromEvent(event: unknown): string {
@@ -69,7 +63,11 @@ function textFromEvent(event: unknown): string {
     if (typeof value === "string") return value;
     if (Array.isArray(value)) return value.map(contentOf).join("");
     if (typeof value !== "object" || value === null) return "";
-    const item = value as { content?: unknown; text?: unknown; delta?: unknown };
+    const item = value as {
+      content?: unknown;
+      text?: unknown;
+      delta?: unknown;
+    };
     return contentOf(item.content ?? item.text ?? item.delta);
   };
   if (Array.isArray(event)) return contentOf(event[0]);
@@ -83,15 +81,18 @@ export async function streamAnchoredBranchRun(
   question: string,
   onText: (text: string) => void,
 ): Promise<void> {
-  const response = await fetch(`${base()}/${encodeURIComponent(branchId)}/runs/stream`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      input: { messages: [{ role: "human", content: question }] },
-      stream_mode: ["messages-tuple", "values"],
-      on_disconnect: "continue",
-    }),
-  });
+  const response = await fetch(
+    `${base()}/${encodeURIComponent(branchId)}/runs/stream`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        input: { messages: [{ role: "human", content: question }] },
+        stream_mode: ["messages-tuple", "values"],
+        on_disconnect: "continue",
+      }),
+    },
+  );
   if (!response.ok || !response.body) {
     throw new Error(`Branch stream failed (${response.status})`);
   }
@@ -104,7 +105,9 @@ export async function streamAnchoredBranchRun(
     const frames = buffer.split("\n\n");
     buffer = frames.pop() ?? "";
     for (const frame of frames) {
-      const dataLine = frame.split("\n").find((line) => line.startsWith("data: "));
+      const dataLine = frame
+        .split("\n")
+        .find((line) => line.startsWith("data: "));
       if (!dataLine) continue;
       try {
         const eventText = textFromEvent(JSON.parse(dataLine.slice(6)));

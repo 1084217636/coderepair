@@ -6,7 +6,7 @@ import tempfile
 from datetime import UTC, datetime
 from pathlib import Path
 
-from .models import AnchorSelection, BranchDecision, BranchRecord, BranchStatus
+from .models import AnchorSelection, BranchContextStrategy, BranchRecord, BranchStatus
 
 
 def now_iso() -> str:
@@ -33,7 +33,11 @@ class AnchoredBranchStore:
         child_thread_id: str,
         owner_id: str,
         anchor: AnchorSelection,
-        root_summary: str = "",
+        main_task_summary: str = "",
+        relevant_main_context: list[str] | None = None,
+        main_history: list[str] | None = None,
+        context_strategy: BranchContextStrategy = BranchContextStrategy.ANCHORED_CONTEXT,
+        token_budget: int = 6_000,
     ) -> BranchRecord:
         branch_id = f"branch_{datetime.now(UTC).strftime('%Y%m%d_%H%M%S')}_{os.urandom(4).hex()}"
         timestamp = now_iso()
@@ -43,7 +47,11 @@ class AnchoredBranchStore:
             child_thread_id=child_thread_id,
             owner_id=owner_id,
             anchor=anchor,
-            root_summary=root_summary,
+            main_task_summary=main_task_summary,
+            relevant_main_context=list(relevant_main_context or []),
+            main_history=list(main_history or []),
+            context_strategy=context_strategy,
+            token_budget=token_budget,
             created_at=timestamp,
             updated_at=timestamp,
         )
@@ -82,18 +90,10 @@ class AnchoredBranchStore:
                 records.append(record)
         return sorted(records, key=lambda item: item.created_at, reverse=True)
 
-    def save_decision(self, record: BranchRecord, decision: BranchDecision) -> BranchRecord:
-        if record.decision and record.decision.decision_id != decision.decision_id:
-            raise ValueError("branch already has a different decision")
-        record.decision = decision
-        return self.save(record)
-
-    def mark_applied(self, record: BranchRecord, decision_id: str) -> BranchRecord:
-        if record.decision is None or record.decision.decision_id != decision_id:
-            raise ValueError("decision does not belong to branch")
-        if record.decision.applied:
+    def close(self, branch_id: str) -> BranchRecord:
+        record = self.get(branch_id)
+        if record.status == BranchStatus.CLOSED:
             return record
-        record.decision.applied = True
-        record.decision.applied_at = now_iso()
-        record.status = BranchStatus.APPLIED
+        record.status = BranchStatus.CLOSED
+        record.closed_at = now_iso()
         return self.save(record)

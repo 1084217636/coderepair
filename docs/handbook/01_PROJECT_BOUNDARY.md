@@ -9,7 +9,7 @@
 | 范围 | 内容 |
 | --- | --- |
 | 上游 DeerFlow | Thread、Run、Checkpoint、Lead Agent、Tool、Middleware、SandboxProvider、StreamBridge、SSE、Next.js 工作台 |
-| 本项目新增 | `deerflow.code_change`、Code Change API/控制台、受限 Patch Agent、`deerflow.anchored_branch`、Branch Context、Decision/Apply |
+| 本项目新增 | `deerflow.anchored_branch`、细粒度 Anchor、Main/Child 隔离、Branch Context Builder、双栏 UI 与三策略实验；`deerflow.code_change` 作为 Demo |
 | 当前未完成 | 自动创建或合并真实 PR、生产级容器隔离、在线模型修复率评测、真实用户接受率、多机共享任务存储 |
 
 Project/Task、claim/lease 与报告仍是当前实现的一部分，但它们服务于 Coding Agent 的可控执行，不是另一个分布式系统项目的主叙事。
@@ -42,5 +42,5 @@ Project/Task、claim/lease 与报告仍是当前实现的一部分，但它们�
 ## 参考答案
 
 1. 它们来自上游，个人工作是复用并扩展；混写会使项目贡献不可验证。
-2. 把模型能力放进显式、可审计、可测试的边界：候选 Patch 要经过确定性验证，局部分支决策要经用户 Apply 才回主线程。
+2. 把模型能力放进显式、可测试的边界：候选 Patch 要经过确定性验证；局部分支只写 Child Thread，默认关闭不回写主线程。
 3. 不应。它是控制面可靠性细节，只有面试官追问并发领取或故障恢复时再展开。

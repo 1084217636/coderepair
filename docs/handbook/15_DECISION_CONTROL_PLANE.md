@@ -1,10 +1,6 @@
-# 15 Decision 回流、Task 状态机与 Human-in-the-loop
+# 15 Code Change Task 状态机与 Human-in-the-loop
 
-本项目有两类人工控制点：Branch 的结构化 Decision 需要用户显式 Apply 回 Main Thread；Code Change 的候选 Patch 在测试和报告完成后需要人工 approve 或 request changes。二者都遵循“模型建议不自动变成高风险副作用”。
-
-## Branch Decision
-
-`BranchDecision` 保存 summary、actions、constraints、rationale。Apply 合并的是决策，不是聊天历史，也不是 Git branch。它写入 Main Thread metadata，下一次 Main Run 由现有 Agent 决定是否检查、修改和测试。重复 create/apply 返回同一 Decision，避免网络重试产生重复动作。
+Anchored Branch 没有 Decision、Accept/Edit/Reject 或 Apply-to-Main。关闭 Branch 不写主线。本章只讲 Code Change Demo 中候选 Patch 的人工 approve/request changes，不要把代码审核状态机误认为对话分支的长期记忆治理。
 
 ## Code Change Task
 
@@ -22,27 +18,27 @@ Task 持久记录 requirement、source commit、Patch、context、test、attempt
 
 ## 本章代码阅读任务
 
-### Branch Decision 与 Code Review 分开问
+### 只学习 Code Change Review
 
-先逐个问 Branch store/apply，再问 Code Change model/state/worker/review：
+按 Code Change model/state/worker/review 顺序阅读：
 
 > 我现在只学习【当前决策或状态函数】。请先说明用户在什么状态下触发它，再按请求字段、前置状态检查、持久化写入、幂等判断、后续副作用和响应逐段解释。画出调用前后状态机，并推演重复请求、旧 Worker 写回、request changes 后重提。若与另一套 human gate 比较，只在结尾列出差异，不要混讲代码。最后给 3 道带答案的自测题。
 
 回答必须区分“保存决定”和“执行决定”。
 
-- 阅读顺序：`backend/packages/harness/deerflow/anchored_branch/store.py` 的 Decision 方法与 `backend/app/gateway/routers/anchored_branch.py` 的 apply → `backend/packages/harness/deerflow/code_change/models.py` → `backend/packages/harness/deerflow/code_change/state_machine.py` → `backend/packages/harness/deerflow/code_change/worker.py` → `backend/packages/harness/deerflow/code_change/review.py`。
-- 看到什么程度：能比较两个 human gate 的输入、持久化位置、幂等方式和后续副作用。
+- 阅读顺序：`backend/packages/harness/deerflow/code_change/models.py` → `backend/packages/harness/deerflow/code_change/state_machine.py` → `backend/packages/harness/deerflow/code_change/worker.py` → `backend/packages/harness/deerflow/code_change/review.py`。
+- 看到什么程度：能解释 Patch 审核的输入、持久化位置、合法状态和后续副作用。
 - 暂不要求：不设计跨服务审批平台或多机队列。
-- 验收动作：画出重复 Apply、旧 Worker 恢复写回、request changes 后重提 Patch 三种状态变化。
+- 验收动作：画出旧 Worker 恢复写回、approve 和 request changes 后重提 Patch 三种状态变化。
 
 ## 本章自测
 
-1. Apply Branch Decision 后是否已经改代码？
-2. Task 为什么不能只是一条队列消息？
-3. Human-in-the-loop 只是在 UI 放一个按钮吗？
+1. Task 为什么不能只是一条队列消息？
+2. Human-in-the-loop 只是在 UI 放一个按钮吗？
+3. Branch Close 和 Patch approve 的副作用为什么不同？
 
 ## 参考答案
 
-1. 没有。它只写 Main metadata，下一次 Agent Run 才可能调用工具执行变更。
-2. Task 要长期保存基线、输入、过程、结果、失败、重试和审批；队列消息可能重复或过期。
-3. 不是。还需要合法状态、身份、审查材料、幂等、审计记录和明确的批准后副作用边界。
+1. Task 要长期保存基线、输入、过程、结果、失败、重试和审批；队列消息可能重复或过期。
+2. 不是。还需要合法状态、身份、审查材料、幂等、审计记录和明确的批准后副作用边界。
+3. Branch Close 只结束 Child Thread，Main 不变；Patch approve 是 Code Change Demo 的人工审核状态转换。它们属于不同产品问题。

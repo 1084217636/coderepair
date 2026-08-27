@@ -27,7 +27,7 @@ deerflow.code_change
 受控代码变更任务、受限 Patch Agent、Workspace、校验、测试、审核材料
 
 deerflow.anchored_branch
-从主对话选择 Anchor、创建 Child Thread、构建有预算的上下文、结构化 Decision 回流
+从主对话选择 Anchor、创建独立 Child Thread，并用受预算的 Anchored Context 继续局部追问
 ```
 
 当前没有完成的能力：

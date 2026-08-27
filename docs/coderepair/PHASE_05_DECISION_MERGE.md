@@ -1,46 +1,35 @@
-# Phase 5：BranchDecision → Apply to Main
+# Phase 5：关闭 Branch 与可选总结回主线
 
-## WHAT_I_USED_FROM_DEERFLOW
+> 文件名为兼容旧链接保留；当前设计没有 BranchDecision 或 Apply-to-Main。
 
-复用 Thread metadata 更新、Checkpoint/Run 的下一次读取和现有人工审批思路；不把 Branch 文本直接拼回 Main History，也不自动修改代码。
+## 当前行为
 
-## WHAT_I_CHANGED
-
-新增结构化 `BranchDecision`、`POST /{branch_id}/decision` 和 `POST /{branch_id}/apply`。Apply 写入主 Thread 的 `anchored_branch_decision` metadata，并由下一次 `start_run` 自动注入 `branch_decision`，主 Agent 继续决定是否调用工具修改代码。
-
-## REQUEST_FLOW
+关闭 Branch 调用 `POST /api/anchored-branches/{branch_id}/close`，只把 Branch Record 和 Child Thread metadata 标为 `CLOSED`。Main Thread 的消息、Checkpoint 和 metadata 都不写入，因此默认关闭不会污染主线。
 
 ```text
 Branch Conversation
-→ structured BranchDecision
-→ human preview / explicit Apply
-→ main Thread metadata
-→ next main Run
-→ AnchoredBranchContextMiddleware
-→ Agent decides whether to inspect / modify / test
+→ Close
+→ Branch Record CLOSED
+→ Child Thread metadata CLOSED
+→ Main Thread unchanged
 ```
 
-## IMPORTANT_FILES
+实现位置：
 
-- `backend/packages/harness/deerflow/anchored_branch/models.py`：`BranchDecision`。
-- `backend/packages/harness/deerflow/anchored_branch/store.py`：`save_decision`、`mark_applied`。
-- `backend/app/gateway/routers/anchored_branch.py`：`create_branch_decision`、`apply_branch_decision`。
-- `backend/app/gateway/services.py`：读取主 Thread decision 并注入下一次 Run。
+- `anchored_branch/store.py::close`：幂等关闭一个 Branch。
+- `anchored_branch.py::close_branch`：校验 owner 后只更新 Child。
+- `anchored-branch-panel.tsx::handleClose`：关闭右栏分支，主回答仍留在左侧原位置。
 
-## WHY_THIS_DESIGN
+## 唯一允许的后续增强
 
-Branch History 不是可靠的任务约束；结构化 Decision 可审计、可幂等、可预览。Merge 只合并决策，不等价于自动改代码，避免人工意图未经主 Agent 验证直接产生副作用。
+可以增加“带总结返回主线”：先让模型根据 Branch History 生成一条短总结，展示给用户；只有用户点击确认后，才把这条普通消息写入 Main Thread。生成总结和写入主线必须是两个动作，默认 Close 仍不写 Main。
 
-## WHAT_I_NEED_TO_LEARN
+当前版本没有实现该可选增强，也不会用 metadata 写入冒充可见的主线消息。
 
-幂等键、状态转换、metadata 持久化、Apply 与真实代码变更的边界。
+## 面试回答
 
-## INTERVIEW_QUESTIONS
-
-1. 为什么 Merge 不直接复制 Branch History？
-2. Apply 如何保证重复点击不会重复应用？
-3. 为什么 Decision 合并后仍要由主 Agent 重新调用工具和测试？
+为什么删除 Decision/Apply？因为项目目标是研究局部锚点和上下文隔离，而不是长期记忆治理。强制每个分支形成 Decision 会增加用户负担，也把项目重心带到审核、冲突和版本治理。这里更重要的可验证性质是：Branch 可以长时间调用模型和工具，但 Main Checkpoint 始终不变。
 
 ## 验收
 
-重复 Apply 返回同一 decision，主 Thread metadata 有结构化 decision，下一次 Main Run 能收到它。
+创建两个 Branch，关闭其中一个；它变为 `CLOSED`，另一个仍为 `ACTIVE`，Main Thread 不增加消息，也不出现 Branch metadata。

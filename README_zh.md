@@ -1,6 +1,6 @@
-# CodeRepair
+# Anchored Branch Context Lab（基于 DeerFlow 二次开发）
 
-CodeRepair 是我基于 DeerFlow 2.0 二次开发的受控代码变更平台。上游 DeerFlow 提供通用 Agent、Tool、Middleware、Thread/Run 和 SandboxProvider；个人二开位于 `backend/packages/harness/deerflow/code_change/`、Code Change Gateway Router 与 `/workspace/code-change` 前端控制台。
+本项目研究复杂长回答中的局部追问：用户选中助手回答的一句话、一段文字或代码片段，系统在原位置建立 Anchor，并用独立 Child Thread 继续多轮讨论。Branch 默认不写入 Main Thread，关闭后可以回到原回答继续阅读。Code Change 保留为演示场景，不是项目核心创新。
 
 ## Anchored Branch 秋招主线
 
@@ -9,12 +9,12 @@ CodeRepair 是我基于 DeerFlow 2.0 二次开发的受控代码变更平台。�
 ```text
 Thread → Run → Agent → Tool → Sandbox → SSE
 → Anchored Branch
-→ Anchor + Summary + Branch History + Code Context
-→ Branch Decision
-→ Apply to Main
+→ Main Task Summary + Anchor + Relevant Main Context + Branch History
+→ Token Budget
+→ independent Child Thread
 ```
 
-DeerFlow 的 Thread、Run、Checkpoint、Agent、Tool、Sandbox 和 SSE 是上游能力；本项目新增 `deerflow.anchored_branch`、`BranchContextBuilder`、Branch Decision API 和前端选择面板。Branch 使用 Child Thread 保存独立对话，不复制 `branch_messages`；Apply 只把结构化决策写回 Main Thread metadata，下一次 Main Run 再由 Agent 决定是否修改和测试代码。
+DeerFlow 的 Thread、Run、Checkpoint、Agent、Tool、Sandbox 和 SSE 是上游能力；本项目新增细粒度 Anchor 数据、Main/Child Thread 关系、`BranchContextBuilder`、上下文策略实验和双栏交互。它不宣称首创对话 Branch，也不实现 Decision Capsule、Context Ledger、Stale、Conflict 或 Supersede 等长期记忆治理。
 
 一次任务从已登记仓库和需求开始。系统支持两种候选 Patch 来源：
 
@@ -30,7 +30,7 @@ DeerFlow 的 Thread、Run、Checkpoint、Agent、Tool、Sandbox 和 SSE 是上�
 ## 个人二开的当前实现
 
 - 外部 Patch 与最小权限 DeerFlow Patch Agent 两条入口。
-- Anchored Branch、上下文预算、结构化 Decision 与显式 Apply to Main。
+- Anchored Branch、Main/Child 上下文隔离、受预算的 Anchored Context 和三策略实验。
 - 固定 Git commit 的 local-copy Workspace、Patch 路径校验和服务端测试 profile。
 - Project、Task、状态机、owner 隔离，以及 `claim_id`/lease/fencing 控制面。
 - Task timeline、测试报告、审计材料、人工 approve/request changes 和 PR handoff。
@@ -46,6 +46,7 @@ DeerFlow 的 Thread、Run、Checkpoint、Agent、Tool、Sandbox 和 SSE 是上�
 - 轻量检索没有向量数据库、Embedding 或 Rerank。
 - PR handoff 只生成交接材料，没有调用 GitHub 创建真实 PR。
 - 20 条确定性评测不衡量在线模型成功率、token 成本或真实人工接受率。
+- 当前 Branch Store 是 owner 目录下的本机 JSON 索引；消息仍由 DeerFlow Thread/Checkpoint 保存。
 
 ## 验证
 

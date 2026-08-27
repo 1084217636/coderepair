@@ -139,6 +139,8 @@ export function MessageListItem({
   return (
     <AIElementMessage
       className={cn("group/conversation-message relative w-full", className)}
+      data-branch-message-id={message.id ?? undefined}
+      data-branch-message-role={isHuman ? "human" : "assistant"}
       from={isHuman ? "user" : "assistant"}
     >
       <MessageContent

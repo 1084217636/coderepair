@@ -210,7 +210,6 @@ export default function ChatPage() {
               <ArtifactTrigger />
             </div>
           </header>
-          <AnchoredBranchPanel mainThreadId={threadId} disabled={isNewThread || isMock} />
           <main className="flex min-h-0 max-w-full grow flex-col">
             <div className="flex min-h-0 flex-1 justify-center">
               <MessageList
@@ -323,6 +322,10 @@ export default function ChatPage() {
               </div>
             </div>
           </main>
+          <AnchoredBranchPanel
+            mainThreadId={threadId}
+            disabled={isNewThread || isMock}
+          />
         </div>
       </ChatBox>
     </ThreadContext.Provider>

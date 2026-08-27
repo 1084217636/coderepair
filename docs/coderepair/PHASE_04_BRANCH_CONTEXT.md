@@ -6,13 +6,14 @@
 
 ## WHAT_I_CHANGED
 
-新增 `BranchContextBuilder`，按固定顺序组合 Anchor、Root Summary、Branch History、Code Context、Current Question，并以字符预算近似 token budget。Anchor 与当前问题 hard preserve，历史从尾部截取，代码上下文超预算时显式标记 truncated。
+新增 `BranchContextBuilder`，生产策略组合 `Main Task Summary + Anchor + Relevant Main Context + Branch History + Current Question`，并以字符预算近似 Token Budget。Anchor 与当前问题 hard preserve，超预算时先删除可选上下文并显式标记 `truncated`。
 
 ## REQUEST_FLOW
 
 ```text
 Child checkpoint messages
- + main summary
+ + main task summary
+ + relevant Main context snapshot
  + Anchor
  + bounded code context
  + current question
@@ -31,7 +32,7 @@ Child checkpoint messages
 
 ## WHY_THIS_DESIGN
 
-完整 Main History 会污染 Branch 局部问题并浪费 token。结构化 Context 让输入来源可解释、可测量、可比较；Anchor 和当前问题不能被摘要悄悄丢失。
+完整 Main History 背景充分但噪声和 Token 成本高；只给 Anchor 成本低但容易缺背景。Anchored Context 保留主任务摘要和筛选后的相关主线内容，在背景充分与隔离之间折中。三种策略共用同一 Builder，便于控制变量实验。
 
 ## WHAT_I_NEED_TO_LEARN
 
@@ -39,7 +40,7 @@ Prompt 组成、summary 与 message history 的边界、上下文预算、代码
 
 ## INTERVIEW_QUESTIONS
 
-1. 为什么不能把整个 Main History 回灌？
+1. Full History、Anchor Only 和 Anchored Context 各自会失败在哪里？
 2. Summary 会不会覆盖 Anchor？
 3. 代码上下文为什么先做 bounded read 而不是向量库？
 4. 如何证明 Context 压缩没有丢关键约束？

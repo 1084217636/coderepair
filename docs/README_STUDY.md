@@ -15,7 +15,7 @@ CodeRepair 的主学习资料在 [`handbook/README.md`](handbook/README.md)。�
 
 第二遍读 05 到 09。目标是能讲清 DeerFlow Runtime、Agent Loop、LangGraph State、Tool、Middleware、Memory、Skill 与 Sub-Agent。
 
-第三遍读 10 到 15。目标是走通检索、Patch Agent、Workspace/Test、Anchored Branch、Context 与 Decision/HITL。
+第三遍读 10 到 15。目标是走通检索、Patch Agent、Workspace/Test、Anchored Branch、上下文隔离与三策略实验。
 
 第四遍读 16 到 21。目标是完成安全威胁模型、Agent eval、故障排查、源码地图、六周面试验收和三篇真实开发复盘。
 

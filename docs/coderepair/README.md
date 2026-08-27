@@ -12,7 +12,7 @@
 2. [Phase 2：最小 Coding Agent Demo](PHASE_02_CODING_AGENT.md)
 3. [Phase 3：Anchored Branch](PHASE_03_ANCHORED_BRANCH.md)
 4. [Phase 4：BranchContextBuilder](PHASE_04_BRANCH_CONTEXT.md)
-5. [Phase 5：BranchDecision 合并](PHASE_05_DECISION_MERGE.md)
+5. [Phase 5：关闭 Branch 与可选总结回主线](PHASE_05_DECISION_MERGE.md)
 6. [Phase 6：Benchmark、README 与面试](PHASE_06_BENCHMARK_INTERVIEW.md)
 
 每个阶段都必须回答：用了什么上游能力、改了什么、为什么这样设计、请求如何走、重要文件/符号是什么、还需要学习什么、面试怎么追问。

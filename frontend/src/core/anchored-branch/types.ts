@@ -14,18 +14,19 @@ export interface BranchRecord {
   child_thread_id: string;
   owner_id: string;
   anchor: AnchorSelection;
-  root_summary: string;
-  status: "ACTIVE" | "APPLIED" | "ARCHIVED";
-  decision?: BranchDecision | null;
+  main_task_summary: string;
+  relevant_main_context: string[];
+  main_history: string[];
+  context_strategy: "FULL_HISTORY" | "ANCHOR_ONLY" | "ANCHORED_CONTEXT";
+  token_budget: number;
+  status: "ACTIVE" | "CLOSED";
+  created_at: string;
+  updated_at: string;
+  closed_at: string;
 }
 
-export interface BranchDecision {
-  decision_id: string;
-  branch_id: string;
-  summary: string;
-  actions: string[];
-  constraints: string[];
-  rationale: string;
-  applied: boolean;
-  applied_at: string;
+export interface BranchMessage {
+  id: string;
+  role: string;
+  text: string;
 }

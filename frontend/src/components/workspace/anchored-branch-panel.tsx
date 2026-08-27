@@ -1,23 +1,68 @@
 "use client";
 
-import { GitBranchIcon, SendIcon } from "lucide-react";
-import { useEffect, useState } from "react";
+import { GitBranchIcon, SendIcon, XIcon } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  applyBranchDecision,
+  closeAnchoredBranch,
   createAnchoredBranch,
-  createBranchDecision,
+  getAnchoredBranchMessages,
   listAnchoredBranches,
   streamAnchoredBranchRun,
+  type AnchorSelection,
+  type BranchMessage,
   type BranchRecord,
 } from "@/core/anchored-branch";
+import { cn } from "@/lib/utils";
 
 interface AnchoredBranchPanelProps {
   mainThreadId: string;
   disabled?: boolean;
+}
+
+interface PendingSelection {
+  anchor: AnchorSelection;
+  x: number;
+  y: number;
+}
+
+function captureSelection(): PendingSelection | null {
+  const selection = window.getSelection();
+  const text = selection?.toString().trim() ?? "";
+  if (!selection || selection.rangeCount === 0 || !text) return null;
+  const range = selection.getRangeAt(0);
+  const node = range.commonAncestorContainer;
+  const element = node instanceof Element ? node : node.parentElement;
+  const answer = element?.closest<HTMLElement>(
+    "[data-branch-message-role='assistant']",
+  );
+  const messageId = answer?.dataset.branchMessageId;
+  if (
+    !answer ||
+    !messageId ||
+    !answer.contains(range.startContainer) ||
+    !answer.contains(range.endContainer)
+  ) {
+    return null;
+  }
+
+  const prefix = range.cloneRange();
+  prefix.selectNodeContents(answer);
+  prefix.setEnd(range.startContainer, range.startOffset);
+  const startOffset = prefix.toString().length;
+  const rect = range.getBoundingClientRect();
+  return {
+    anchor: {
+      text,
+      message_id: messageId,
+      start_offset: startOffset,
+      end_offset: startOffset + range.toString().length,
+    },
+    x: Math.min(rect.right, window.innerWidth - 150),
+    y: Math.max(8, rect.top - 42),
+  };
 }
 
 export function AnchoredBranchPanel({
@@ -26,77 +71,150 @@ export function AnchoredBranchPanel({
 }: AnchoredBranchPanelProps) {
   const [branches, setBranches] = useState<BranchRecord[]>([]);
   const [branch, setBranch] = useState<BranchRecord | null>(null);
+  const [messages, setMessages] = useState<BranchMessage[]>([]);
+  const [selection, setSelection] = useState<PendingSelection | null>(null);
   const [question, setQuestion] = useState("");
-  const [answer, setAnswer] = useState("");
-  const [decision, setDecision] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+
+  const branchesByMessage = useMemo(() => {
+    const grouped = new Map<string, BranchRecord[]>();
+    for (const item of branches) {
+      const id = item.anchor.message_id;
+      if (id) grouped.set(id, [...(grouped.get(id) ?? []), item]);
+    }
+    return grouped;
+  }, [branches]);
+
+  useEffect(() => {
+    if (disabled) return;
+    const handleMouseUp = () =>
+      window.setTimeout(() => setSelection(captureSelection()), 0);
+    document.addEventListener("mouseup", handleMouseUp);
+    return () => document.removeEventListener("mouseup", handleMouseUp);
+  }, [disabled]);
 
   useEffect(() => {
     if (!mainThreadId || disabled) return;
     void listAnchoredBranches(mainThreadId)
       .then((items) => {
         setBranches(items);
-        setBranch(items[0] ?? null);
+        setBranch(
+          (current) =>
+            current ??
+            items.find((item) => item.status === "ACTIVE") ??
+            items[0] ??
+            null,
+        );
       })
       .catch(() => setError("Branch 列表加载失败"));
   }, [disabled, mainThreadId]);
 
-  async function handleCreate() {
-    const text = window.getSelection()?.toString().trim() ?? "";
-    if (!text) {
-      setError("请先在回答中选择一段文字");
+  useEffect(() => {
+    if (!branch) {
+      setMessages([]);
       return;
     }
+    void getAnchoredBranchMessages(branch.branch_id)
+      .then(setMessages)
+      .catch(() => setError("Branch 历史加载失败"));
+  }, [branch]);
+
+  useEffect(() => {
+    document
+      .querySelectorAll("[data-anchored-branch-marker]")
+      .forEach((marker) => marker.remove());
+    for (const [messageId, items] of branchesByMessage) {
+      const answer = [
+        ...document.querySelectorAll<HTMLElement>("[data-branch-message-id]"),
+      ].find((item) => item.dataset.branchMessageId === messageId);
+      if (!answer) continue;
+      const marker = document.createElement("button");
+      marker.type = "button";
+      marker.dataset.anchoredBranchMarker = "true";
+      marker.textContent = `⑂ ${items.length}`;
+      marker.className =
+        "absolute right-1 top-1 z-20 rounded-full border bg-background px-2 py-0.5 text-xs text-muted-foreground shadow-sm";
+      marker.title = `${items.length} 个局部分支`;
+      marker.onclick = () => setBranch(items[0] ?? null);
+      answer.appendChild(marker);
+    }
+    return () =>
+      document
+        .querySelectorAll("[data-anchored-branch-marker]")
+        .forEach((marker) => marker.remove());
+  }, [branchesByMessage]);
+
+  async function handleCreate() {
+    if (!selection) return;
     setBusy(true);
     setError("");
     try {
-      const created = await createAnchoredBranch(mainThreadId, { text });
+      const created = await createAnchoredBranch(
+        mainThreadId,
+        selection.anchor,
+      );
       setBranches((items) => [created, ...items]);
       setBranch(created);
-      setAnswer("");
+      setMessages([]);
+      setSelection(null);
+      window.getSelection()?.removeAllRanges();
     } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : "Branch 创建失败");
+      setError(
+        nextError instanceof Error ? nextError.message : "Branch 创建失败",
+      );
     } finally {
       setBusy(false);
     }
   }
 
   async function handleAsk() {
-    if (!branch || !question.trim()) return;
+    const current = branch;
+    const text = question.trim();
+    if (current?.status !== "ACTIVE" || !text) return;
     setBusy(true);
     setError("");
-    setAnswer("");
+    const responseId = `stream-${Date.now()}`;
+    setMessages((items) => [
+      ...items,
+      { id: `local-${Date.now()}`, role: "human", text },
+      { id: responseId, role: "ai", text: "" },
+    ]);
+    setQuestion("");
     try {
-      await streamAnchoredBranchRun(branch.branch_id, question.trim(), (text) =>
-        setAnswer((current) => current + text),
+      await streamAnchoredBranchRun(current.branch_id, text, (chunk) =>
+        setMessages((items) =>
+          items.map((item) =>
+            item.id === responseId
+              ? { ...item, text: item.text + chunk }
+              : item,
+          ),
+        ),
       );
-      setQuestion("");
     } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : "Branch 对话失败");
+      setError(
+        nextError instanceof Error ? nextError.message : "Branch 对话失败",
+      );
     } finally {
       setBusy(false);
     }
   }
 
-  async function handleDecision() {
-    if (!branch || !decision.trim()) return;
+  async function handleClose() {
+    if (!branch || branch.status === "CLOSED") return;
     setBusy(true);
-    setError("");
     try {
-      await createBranchDecision(branch.branch_id, {
-        summary: decision.trim(),
-        actions: [],
-        constraints: [],
-        rationale: answer,
-      });
-      const applied = await applyBranchDecision(branch.branch_id);
-      setBranch(applied);
+      const closed = await closeAnchoredBranch(branch.branch_id);
       setBranches((items) =>
-        items.map((item) => (item.branch_id === applied.branch_id ? applied : item)),
+        items.map((item) =>
+          item.branch_id === closed.branch_id ? closed : item,
+        ),
       );
+      setBranch(null);
     } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : "Decision 合并失败");
+      setError(
+        nextError instanceof Error ? nextError.message : "Branch 关闭失败",
+      );
     } finally {
       setBusy(false);
     }
@@ -105,50 +223,121 @@ export function AnchoredBranchPanel({
   if (disabled || !mainThreadId) return null;
 
   return (
-    <Card className="bg-background/95 absolute top-14 right-4 z-30 w-[min(28rem,calc(100vw-2rem))] shadow-lg">
-      <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-sm">
-          <GitBranchIcon className="size-4" />
-          Anchored Branch
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-3 text-sm">
-        <Button size="sm" variant="outline" disabled={busy} onClick={() => void handleCreate()}>
-          从当前选择创建 Branch
+    <>
+      {selection && (
+        <Button
+          className="fixed z-50 shadow-lg"
+          size="sm"
+          style={{ left: selection.x, top: selection.y }}
+          disabled={busy}
+          onMouseDown={(event) => event.preventDefault()}
+          onClick={() => void handleCreate()}
+        >
+          <GitBranchIcon className="size-4" /> Ask in Branch
         </Button>
-        {branches.length > 0 && (
+      )}
+      <aside
+        className={cn(
+          "bg-background flex min-h-0 w-[26rem] shrink-0 flex-col border-l pt-12 max-lg:fixed max-lg:top-0 max-lg:right-0 max-lg:bottom-0 max-lg:z-40 max-lg:w-[min(26rem,92vw)]",
+          !branch && "max-lg:hidden",
+        )}
+      >
+        <header className="flex items-center justify-between border-b px-4 py-3">
+          <div className="flex items-center gap-2 text-sm font-medium">
+            <GitBranchIcon className="size-4" /> Branch Panel
+          </div>
+          {branch && (
+            <Button
+              size="icon-sm"
+              variant="ghost"
+              disabled={busy || branch.status === "CLOSED"}
+              onClick={() => void handleClose()}
+              title="关闭 Branch；不会改动主线"
+            >
+              <XIcon className="size-4" />
+            </Button>
+          )}
+        </header>
+
+        <div className="border-b p-3">
           <select
-            className="border-input bg-background w-full rounded-md border px-2 py-2"
+            className="border-input bg-background w-full rounded-md border px-2 py-2 text-sm"
             value={branch?.branch_id ?? ""}
-            onChange={(event) => setBranch(branches.find((item) => item.branch_id === event.target.value) ?? null)}
+            onChange={(event) =>
+              setBranch(
+                branches.find(
+                  (item) => item.branch_id === event.target.value,
+                ) ?? null,
+              )
+            }
           >
+            <option value="">选择回答文字后创建 Branch</option>
             {branches.map((item) => (
               <option key={item.branch_id} value={item.branch_id}>
-                {item.status} · {item.anchor.text.slice(0, 36)}
+                {item.status === "CLOSED" ? "已关闭" : "讨论中"} ·{" "}
+                {item.anchor.text.slice(0, 36)}
               </option>
             ))}
           </select>
-        )}
-        {branch && (
-          <>
-            <p className="text-muted-foreground rounded-md bg-muted p-2 text-xs">“{branch.anchor.text}”</p>
-            <Textarea value={question} onChange={(event) => setQuestion(event.target.value)} placeholder="针对这段回答继续追问" />
-            <Button size="sm" disabled={busy || !question.trim()} onClick={() => void handleAsk()}>
-              <SendIcon /> 发送到 Branch
+          {branch && (
+            <div className="bg-muted mt-3 rounded-md p-3 text-xs">
+              <div className="text-muted-foreground mb-1">
+                Anchor · {branch.anchor.message_id}
+              </div>
+              <div className="max-h-28 overflow-y-auto whitespace-pre-wrap">
+                {branch.anchor.text}
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-3">
+          {messages.map((message) => (
+            <div
+              key={message.id}
+              className={cn(
+                "rounded-lg px-3 py-2 text-sm whitespace-pre-wrap",
+                message.role === "human" || message.role === "user"
+                  ? "bg-primary text-primary-foreground ml-8"
+                  : "bg-muted mr-4",
+              )}
+            >
+              {message.text || (busy ? "正在回答…" : "")}
+            </div>
+          ))}
+          {!branch && (
+            <p className="text-muted-foreground p-3 text-sm">
+              在左侧 AI 回答中选中一句、一段或代码片段，然后点击 Ask in Branch。
+            </p>
+          )}
+        </div>
+
+        {branch?.status === "ACTIVE" && (
+          <div className="space-y-2 border-t p-3">
+            <Textarea
+              value={question}
+              onChange={(event) => setQuestion(event.target.value)}
+              placeholder="只在当前 Branch 中继续追问"
+            />
+            <Button
+              className="w-full"
+              size="sm"
+              disabled={busy || !question.trim()}
+              onClick={() => void handleAsk()}
+            >
+              <SendIcon className="size-4" /> 发送到 Branch
             </Button>
-            {answer && <div className="max-h-40 overflow-y-auto rounded-md border p-2 whitespace-pre-wrap">{answer}</div>}
-            {answer && !branch.decision && (
-              <>
-                <Textarea value={decision} onChange={(event) => setDecision(event.target.value)} placeholder="Branch Decision：要合并回主任务的结论" />
-                <Button size="sm" variant="secondary" disabled={busy || !decision.trim()} onClick={() => void handleDecision()}>
-                  Apply to Main
-                </Button>
-              </>
-            )}
-          </>
+          </div>
         )}
-        {error && <p className="text-destructive text-xs">{error}</p>}
-      </CardContent>
-    </Card>
+        {branch?.status === "CLOSED" && (
+          <p className="text-muted-foreground border-t p-3 text-xs">
+            该 Branch 已关闭。主线内容和位置没有变化。
+          </p>
+        )}
+        {error && (
+          <p className="text-destructive border-t p-3 text-xs">{error}</p>
+        )}
+      </aside>
+    </>
   );
 }

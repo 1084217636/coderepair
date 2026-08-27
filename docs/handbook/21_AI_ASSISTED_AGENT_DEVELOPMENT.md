@@ -69,7 +69,7 @@ AI 可以加快代码定位、测试草拟和文档整理，但不能替代对�
 
 ### 一分钟版本
 
-> 我基于 DeerFlow 做了一个可审计的 Coding Agent。模型只能通过最小权限 Tool 搜索和读取代码，再提交 typed patch；服务端负责路径校验、固定测试模板、状态机、报告和人工审批。我还实现了 Anchored Branch Context，让局部讨论在预算内继承上下文，并通过结构化 Decision 回流主线程。项目用后端测试、前端测试、固定 20 题评测和远端 CI 验证机制，同时明确没有把本地 Workspace 描述成生产级 Sandbox，也不声称固定用例等于线上模型修复率。
+> 我基于 DeerFlow 实现了细粒度 Anchored Branch：从主回答局部 Anchor 创建独立 Child Thread，用受预算的主任务摘要、相关主线内容和 Branch History 构造上下文，关闭时不写 Main。Code Change 作为受限 Tool/Sandbox Demo，模型只能搜索、读取并提交 typed patch；服务端负责确定性校验、测试和报告。项目用后端测试、前端检查、三策略上下文实验和远端 CI 验证，同时不把本地 Workspace 描述成生产级 Sandbox，也不把上下文指标说成模型成功率。
 
 ### 被问“AI 写了多少”
 

@@ -8,7 +8,7 @@
 
 ### 30 秒回答
 
-CodeRepair 是我基于 DeerFlow 二次开发的受控 Coding Agent 平台。我复用了上游 Thread、Run、Tool、Middleware、Checkpoint、SSE 和前端工作台，个人新增两部分。第一部分是 Code Change 工作流，让受限 Agent 只通过 search、read、typed submit 提出候选 Patch，再由 Worker 在固定 commit 的独立 Workspace 中完成路径校验、Patch 应用、测试、报告和人工审核。第二部分是 Anchored Branch，让用户围绕主对话的一段回答创建 Child Thread，并把人工确认的结构化 Decision 回流主线。
+这是我基于 DeerFlow 二次开发的 Anchored Branch Context 项目。我复用上游 Thread、Run、Tool、Checkpoint、SSE 和前端工作台，新增局部 Anchor、Main/Child 隔离、受预算 Context Builder、双栏 UI 和三策略实验。用户围绕长回答中的一句或代码片段创建 Child Thread，Branch 的多轮讨论和工具调用不写 Main。Code Change 是展示 Tool/Sandbox 能力的 Demo，不是核心创新。
 
 ### 详细回答
 
@@ -18,7 +18,7 @@ CodeRepair 是我基于 DeerFlow 二次开发的受控 Coding Agent 平台。我
 
 Agent 模式会构建一个最小 DeerFlow graph，只暴露代码搜索、限量读文件和类型化 Patch 提交三个 Tool。模型提交 unified diff 后，流程与 external 模式汇合。系统检查变更路径，执行 `git apply --check`，在 Workspace 中应用 Patch，运行白名单测试命令，并保存 Patch、日志、报告和审核材料。测试通过只到 HANDOFF_READY，人工批准才到 APPROVED。
 
-我还做了 Anchored Branch。用户选择主回答中的一段文本作为 Anchor，系统创建 Child Thread，按预算组合 Anchor、摘要、分支历史、代码上下文和当前问题。分支结论整理成 Decision，显式 Apply 后写回主 Thread metadata，下一次主 Run通过 Middleware读取约束。
+用户选择主回答的一段文本后，系统保存 message ID、offset、Anchor 原文和可选代码引用，校验后创建 Child Thread。每次 Run 按预算组合主任务摘要、Anchor、相关主线内容和 Branch History。关闭 Branch 只结束 Child，Main 不变。
 
 当前版本适合本地演示和面试验证。Store 与队列是单机文件实现，Workspace 是 local-copy，没有生产容器隔离，也没有自动创建真实 PR。我会把这些限制和目标架构分开讲。
 
@@ -55,7 +55,7 @@ Agent 模式会构建一个最小 DeerFlow graph，只暴露代码搜索、限�
 
 我先区分学习目的和项目目的。为了理解 Agent Loop，我需要能解释 messages state、模型节点、Tool 节点和停止条件，甚至可以手写最小循环。但项目要提供完整交互和持久运行，只写循环不够。
 
-DeerFlow 已经有 Gateway、Lead Agent、Thread/Run、Checkpoint、StreamBridge、SSE、Tool 和 Middleware 链。Anchored Branch 如果另建消息表和流式系统，会与上游状态重复。复用 Child Thread 和现有 Run 之后，新增代码只关注 Anchor、Context 和 Decision。
+DeerFlow 已经有 Gateway、Lead Agent、Thread/Run、Checkpoint、StreamBridge、SSE、Tool 和 Middleware 链。Anchored Branch 如果另建消息表和流式系统，会与上游状态重复。复用 Child Thread 和现有 Run 后，新增代码只关注 Anchor、Context Isolation 和 Context Engineering。
 
 Code Change 也没有直接复用全权限 Lead Agent，而是使用上游提供的 `create_deerflow_agent` 工厂构建最小 Agent。也就是说，复用不是照搬，我仍然根据风险重新选择 Tool 和 Middleware。
 
@@ -91,7 +91,7 @@ Code Change 也没有直接复用全权限 Lead Agent，而是使用上游提供
 可以使用下面三条：
 
 ```text
-基于 DeerFlow 二次开发受控 Coding Agent 工作流，复用 Thread、Run、Tool、Middleware 与 SSE Runtime，新增 Code Change 控制面和 Anchored Branch Context，支持候选代码变更的任务化执行与人工决策回流。
+基于 DeerFlow 二次开发细粒度 Anchored Branch，复用 Thread、Run、Tool、Checkpoint 与 SSE Runtime，新增局部锚点、Main/Child 隔离、双栏交互和有预算的 Context Builder。
 
 设计受限 Patch Agent，仅开放 search、read 和 typed submit Tool；将模型生成与执行解耦，在固定 Git commit 的独立 Workspace 中完成路径校验、git apply --check、服务端测试 profile、超时进程组清理和报告生成。
 
@@ -103,7 +103,7 @@ Code Change 也没有直接复用全权限 Lead Agent，而是使用上游提供
 如果简历空间只有两条，可以把 Anchored Branch 单独压缩为一句：
 
 ```text
-实现 Anchored Branch，将主回答选区映射为 Child Thread，按预算硬保留 Anchor 和当前问题，并将人工确认的结构化 Decision 注入下一次主线 Run。
+实现 Anchored Branch，将主回答选区的 message ID、offset 和原文映射为独立 Child Thread，按预算组合主任务摘要、相关上下文和 Branch History，关闭时不修改主线。
 ```
 
 ### 结合当前 CodeRepair 源码

@@ -2,17 +2,17 @@
 
 ## WHAT_I_USED_FROM_DEERFLOW
 
-Benchmark 只测本项目自定义的 Context 策略和 Branch 决策闭环；不把 DeerFlow 上游能力或固定外部 Patch 评测冒充在线模型成功率。
+Benchmark 只测本项目自定义的 Context 策略；不把 DeerFlow 上游能力、上下文命中率或固定外部 Patch 评测冒充在线模型成功率。
 
 ## WHAT_I_CHANGED
 
-阶段记录保留在 `docs/coderepair/`，正式学习顺序集中在 `docs/handbook/`。Benchmark 至少比较 Full History 与 Anchored Context，记录 prompt 字符/token 估算、Anchor 保留率、当前问题保留率和输出延迟。
+Benchmark 比较 Full History、Anchor Only 和 Anchored Context，记录 Prompt Token、背景遗漏率、无关上下文比例、Branch History 保留和截断。只有提供真实模型输出时才计算回答正确率；否则 `answer_correct=null`。
 
 ## REQUEST_FLOW
 
 ```text
 固定 Repository + 固定回答片段 + 固定问题集
-→ Full History / Anchored Context 两组输入
+→ Full History / Anchor Only / Anchored Context 三组输入
 → 相同模型与工具策略
 → 记录 token、耗时、关键约束命中、人工决策结果
 → JSON + Markdown
@@ -36,7 +36,7 @@ cd backend
 PYTHONPATH=. uv run python -m deerflow.anchored_branch.benchmark --output ../artifacts/anchored-context-benchmark.json
 ```
 
-它只报告上下文字符缩减率、估算 token、Anchor/Current Question 保留率和截断标记，不声称模型质量或人工接受率。
+默认运行只报告可确定计算的上下文指标。要比较回答正确率和长分支后主任务恢复能力，必须固定模型、温度、工具策略和任务集，保存三组真实输出后再评分。
 
 ## WHAT_I_NEED_TO_LEARN
 
@@ -50,4 +50,4 @@ PYTHONPATH=. uv run python -m deerflow.anchored_branch.benchmark --output ../art
 
 ## 三分钟项目介绍骨架
 
-CodeRepair 是我基于 DeerFlow Agent Harness 做的 Coding Agent 二次开发。我复用了 LangGraph、Thread、Checkpoint、Tool、Sandbox 和 Streaming，新增了 Anchored Branch Context：用户从长回答中选取局部片段，系统创建 Child Thread，并将 Anchor、摘要、Branch History、代码上下文和当前问题按预算组合后继续对话。Branch 产生结构化 Decision，用户显式 Apply 后写回 Main Thread；下一次 Main Run 收到 Decision，再由 Agent 重新检查代码、修改和测试。这样把局部追问、上下文控制和 Human-in-the-loop 合并成一条可运行链路。
+我基于 DeerFlow 的 Thread、Checkpoint、Agent、Tool、Sandbox 和 Streaming 实现了细粒度 Anchored Branch。用户从长回答中选择一句、一段或代码片段，系统校验主消息与文本位置后创建独立 Child Thread；每次 Branch Run 按预算组合主任务摘要、Anchor、相关主线上下文和 Branch History。关闭 Branch 不写 Main Thread。我用 Full History、Anchor Only 和 Anchored Context 三组策略研究背景完整性、噪声与 Token 成本之间的取舍。Code Change 只是展示分支中搜索代码和调用工具的 Demo。

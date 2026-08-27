@@ -27,20 +27,4 @@ class AnchoredBranchContextMiddleware(AgentMiddleware):
                         additional_kwargs={"hide_from_ui": True, "anchored_branch_context": True},
                     )
                 )
-        decision = context.get("branch_decision") if isinstance(context, dict) else None
-        if isinstance(decision, dict):
-            updates.append(
-                SystemMessage(
-                    id=f"anchored-branch-decision:{decision.get('decision_id', 'latest')}",
-                    name="anchored_branch_decision",
-                    content=(
-                        "<anchored_branch_decision>\n"
-                        "A human reviewed a child conversation. Treat this as a constraint for the current task; "
-                        "do not claim code was changed unless a tool actually changed and tested it.\n"
-                        f"{decision}\n"
-                        "</anchored_branch_decision>"
-                    ),
-                    additional_kwargs={"hide_from_ui": True, "anchored_branch_decision": True},
-                )
-            )
         return {"messages": updates} if updates else None

@@ -155,14 +155,14 @@ LangChain提供模型、消息和 Tool 抽象；LangGraph提供有状态执行�
 
 产品框架层是 DeerFlow。它在 LangGraph 之上提供 Gateway Runtime、Lead Agent、Middleware 链、SandboxProvider、Memory、Skills、Subagents、StreamBridge、SSE 和 Next.js UI。
 
-我的二次开发没有复制一套 Runtime。Patch Agent 通过 `create_deerflow_agent` 构建最小 graph；Anchored Branch 使用现有 ThreadStore、Checkpointer、RunManager、StreamBridge 和 SSE，只增加 Anchor、BranchContext 和 Decision 领域。
+我的二次开发没有复制一套 Runtime。Patch Agent 通过 `create_deerflow_agent` 构建最小 graph；Anchored Branch 使用现有 ThreadStore、Checkpointer、RunManager、StreamBridge 和 SSE，只增加 Anchor、Main/Child 关系和有预算的 BranchContext。
 
 ### 结合当前 CodeRepair 源码
 
 - `deerflow/agents/factory.py` 的 `create_deerflow_agent` 最终调用 LangChain `create_agent` 并返回编译后的 StateGraph。
 - `deerflow/code_change/agent_patch.py` 传入三个受限 Tool 和空 Middleware。
 - `app/gateway/routers/anchored_branch.py` 创建 Child Thread 和空 Checkpoint，调用现有 `start_run`，再通过 `sse_consumer` 返回流式结果。
-- `deerflow/anchored_branch/middleware.py` 在模型调用前注入 request-scoped Branch Context 或人工 Decision。
+- `deerflow/anchored_branch/middleware.py` 只在 Child Run 的模型调用前注入 request-scoped Branch Context。
 
 ### 技术选型与替代
 

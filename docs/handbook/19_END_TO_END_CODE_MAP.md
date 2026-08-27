@@ -40,10 +40,9 @@ UI selection
 → BranchContextBuilder
 → AnchoredBranchContextMiddleware
 → existing start_run + SSE
-→ create BranchDecision
-→ explicit Apply
-→ Main Thread metadata
-→ next Main Run
+→ Child Checkpoint only
+→ close Branch
+→ Main Thread unchanged
 ```
 
 ## 源码地图
@@ -52,7 +51,7 @@ UI selection
 - `deerflow/runtime/`：Run、Checkpoint、Event、StreamBridge 与用户上下文。
 - `deerflow/tools/`、`sandbox/`、`skills/`、`subagents/`：能力、执行环境与扩展机制。
 - `deerflow/code_change/`：检索、Patch Agent、Workspace、Test、Task 与报告。
-- `deerflow/anchored_branch/`：Anchor、Context、Middleware、Decision 与 Benchmark。
+- `deerflow/anchored_branch/`：Anchor、Context Isolation、Middleware、Store 与三策略 Benchmark。
 - `app/gateway/routers/`：HTTP、owner/auth 与运行时复用。
 - `frontend/src/core/` 与 `components/workspace/`：请求封装与 UI。
 - `backend/tests/code_change/`：个人新增部分的主要证据。
@@ -76,10 +75,10 @@ UI selection
 
 1. 三条链共享了哪些上游能力？
 2. 哪些属于个人新增？
-3. 哪一步会真正修改 Main Thread metadata？
+3. Branch 链中哪一步会修改 Main Thread？
 
 ## 参考答案
 
 1. Thread/Run、Agent factory、Tool/Middleware、Checkpoint、StreamBridge/SSE、Sandbox 等 DeerFlow 基础设施。
-2. Code Change 领域链、受限 Patch Agent、Anchored Branch/Context/Decision、API 与控制台集成及其测试。
-3. `apply_branch_decision`；创建 Branch、运行 Branch 或保存 Decision 都不等于 Apply。
+2. Code Change Demo、受限 Patch Agent、Anchored Branch/Context Isolation、API 与双栏控制台及其测试。
+3. 没有。create、run、close 都不写 Main；可选总结回主线尚未实现。

@@ -432,8 +432,7 @@ def _make_lead_agent(config: RunnableConfig, *, app_config: AppConfig):
     resolved_app_config = app_config
     custom_middlewares = []
     branch_context = cfg.get("branch_context")
-    branch_decision = cfg.get("branch_decision")
-    if isinstance(branch_context, dict) or isinstance(branch_decision, dict):
+    if isinstance(branch_context, dict):
         from deerflow.anchored_branch.middleware import AnchoredBranchContextMiddleware
 
         custom_middlewares.append(AnchoredBranchContextMiddleware())

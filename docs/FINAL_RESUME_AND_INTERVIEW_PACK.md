@@ -27,20 +27,20 @@ Python / FastAPI / Pydantic / DeerFlow / LangGraph / Tool Calling / Git / pytest
 ```text
 - 基于 DeerFlow Agent Harness 二次开发 Coding Agent 工作流，将模型的概率性代码生成限制在 search、read 和 typed patch submit Tool 内，并把 Patch 应用、测试和审核交给确定性 Worker 执行。
 - 设计 Task 状态机与独立 Workspace 执行链路，将任务固定到源 Git commit，依次完成路径检查、`git apply --check`、服务端测试模板、超时进程组清理、报告和审计记录，避免候选 Patch 直接污染登记仓库。
-- 实现 Anchored Branch Context，从主对话回答中创建 Child Thread，按预算组合 Anchor、摘要、局部历史、代码上下文和当前问题，并通过结构化 Decision 和人工 Apply 显式回流主 Thread。
+- 实现细粒度 Anchored Branch，从主回答选区记录 message ID、offset 与 Anchor 原文，创建独立 Child Thread，并按预算组合主任务摘要、相关主线上下文与 Branch History；关闭 Branch 不写主线。
 ```
 
 如果简历空间不够，可以压缩成 2 条：
 
 ```text
 - 基于 DeerFlow 二次开发 Client-Server Coding Agent 平台，以受限 search/read/typed-submit Tool 生成候选 Patch，并由 Worker 在固定 Git commit 的独立 Workspace 中完成校验、测试、报告与人工审核。
-- 设计 Anchored Branch Context 和结构化 Decision/Apply 机制，按预算组织回答片段、局部历史与代码上下文，降低长对话污染并保留人工决策边界。
+- 设计 Anchored Branch Context，比较 Full History、Anchor Only 与 Anchored Context，在背景遗漏、无关上下文和 Prompt Token 之间评估取舍。
 ```
 
 ## 3. 1 分钟介绍
 
 ```text
-这是一个基于 DeerFlow 二次开发的 Coding Agent 项目。整体采用 Client-Server 架构，Web 客户端通过 FastAPI 控制面创建任务，Patch Agent 只能搜索、读取代码并通过 typed Tool 提交候选 diff，不能直接修改登记仓库。Worker 把任务固定到源 commit，在独立 Workspace 中完成路径校验、Patch 应用、测试、报告和人工审核材料生成。我还实现了 Anchored Branch Context，把回答片段和局部代码上下文放入 Child Thread，通过结构化 Decision 由用户决定是否回流主对话。项目重点是分离模型生成和确定性执行，而不是宣称模型可以全自动修复任意代码。
+这是一个基于 DeerFlow 二次开发的分支式 AI 对话与上下文工程项目。Web 客户端从长回答中选择局部文本，FastAPI 校验消息和 Anchor 后创建独立 Child Thread；Branch Run 复用 DeerFlow Agent、Tool、Sandbox 和 SSE，但只写 Child Checkpoint。Code Change 作为 Demo：Patch Agent 只能搜索、读取代码并通过 typed Tool 提交候选 diff，Worker 在固定源 commit 的独立 Workspace 中完成校验、测试和报告。项目不宣称首创 Branch，也不把 DeerFlow 底层能力当作个人创新。
 ```
 
 ## 4. 3 分钟介绍

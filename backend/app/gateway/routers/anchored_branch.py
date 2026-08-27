@@ -1,8 +1,8 @@
 """Anchored Branch API.
 
 The Gateway continues to use DeerFlow's Thread/Run/SSE endpoints.  This router
-only creates a child Thread, builds request-scoped branch context, and stores a
-structured human decision for an explicit Apply-to-Main action.
+only creates a child Thread, validates an answer-local Anchor, and builds
+request-scoped context without writing Branch history into the Main Thread.
 """
 
 from __future__ import annotations
@@ -18,7 +18,12 @@ from pydantic import BaseModel, Field
 from app.gateway.deps import get_checkpointer, get_run_manager, get_stream_bridge, get_thread_store
 from app.gateway.routers.thread_runs import RunCreateRequest
 from app.gateway.services import sse_consumer, start_run
-from deerflow.anchored_branch import AnchoredBranchStore, AnchorSelection, BranchContextBuilder, BranchDecision
+from deerflow.anchored_branch import (
+    AnchoredBranchStore,
+    AnchorSelection,
+    BranchContextBuilder,
+    BranchContextStrategy,
+)
 from deerflow.runtime.user_context import get_effective_user_id
 from deerflow.utils.messages import message_to_text
 from deerflow.utils.time import now_iso
@@ -28,7 +33,7 @@ router = APIRouter(prefix="/api/anchored-branches", tags=["anchored-branch"])
 
 class AnchorRequest(BaseModel):
     text: str = Field(..., min_length=1, max_length=12_000)
-    message_id: str = ""
+    message_id: str = Field(..., min_length=1, max_length=256)
     start_offset: int | None = Field(default=None, ge=0)
     end_offset: int | None = Field(default=None, ge=0)
     file_path: str = ""
@@ -39,14 +44,8 @@ class AnchorRequest(BaseModel):
 class BranchCreateRequest(BaseModel):
     main_thread_id: str = Field(..., min_length=1)
     anchor: AnchorRequest
-    root_summary: str = Field(default="", max_length=8_000)
-
-
-class BranchDecisionRequest(BaseModel):
-    summary: str = Field(..., min_length=1, max_length=8_000)
-    actions: list[str] = Field(default_factory=list, max_length=20)
-    constraints: list[str] = Field(default_factory=list, max_length=20)
-    rationale: str = Field(default="", max_length=8_000)
+    context_strategy: BranchContextStrategy = BranchContextStrategy.ANCHORED_CONTEXT
+    token_budget: int = Field(default=6_000, ge=512, le=32_000)
 
 
 def _owner_id(request: Request) -> str:
@@ -112,6 +111,84 @@ def _message_history(values: dict[str, Any]) -> list[str]:
     return result
 
 
+def _message_items(values: dict[str, Any]) -> list[dict[str, str]]:
+    result: list[dict[str, str]] = []
+    for message in values.get("messages") or []:
+        text = message_to_text(message).strip()
+        if text:
+            result.append({"id": _message_id(message), "role": _message_role(message), "text": text})
+    return result
+
+
+def _message_id(message: Any) -> str:
+    if isinstance(message, dict):
+        return str(message.get("id") or "")
+    return str(getattr(message, "id", "") or "")
+
+
+def _message_role(message: Any) -> str:
+    if isinstance(message, dict):
+        return str(message.get("type") or message.get("role") or "message")
+    return str(getattr(message, "type", "message") or "message")
+
+
+def _validated_anchor(values: dict[str, Any], request: AnchorRequest) -> AnchorSelection:
+    messages = values.get("messages") or []
+    parent = next((message for message in messages if _message_id(message) == request.message_id), None)
+    if parent is None:
+        raise HTTPException(status_code=422, detail="anchor message_id does not exist in the Main Thread")
+    if _message_role(parent) not in {"ai", "assistant"}:
+        raise HTTPException(status_code=422, detail="an Anchor must belong to an assistant answer")
+
+    parent_text = message_to_text(parent)
+    selected = request.text.strip()
+    start, end = request.start_offset, request.end_offset
+    if (start is None) != (end is None):
+        raise HTTPException(status_code=422, detail="start_offset and end_offset must be supplied together")
+    if start is not None and end is not None and parent_text[start:end].strip() == selected:
+        resolved_start, resolved_end = start, end
+    else:
+        matches: list[int] = []
+        cursor = 0
+        while (match := parent_text.find(selected, cursor)) >= 0:
+            matches.append(match)
+            cursor = match + max(1, len(selected))
+        if not matches:
+            raise HTTPException(status_code=422, detail="anchor text does not occur in the selected Main answer")
+        resolved_start = min(matches, key=lambda match: abs(match - start)) if start is not None else matches[0]
+        resolved_end = resolved_start + len(selected)
+
+    return AnchorSelection(
+        **request.model_dump(exclude={"start_offset", "end_offset"}),
+        start_offset=resolved_start,
+        end_offset=resolved_end,
+    )
+
+
+def _main_context_snapshot(values: dict[str, Any], anchor_message_id: str) -> tuple[str, list[str], list[str]]:
+    messages = values.get("messages") or []
+    entries: list[str] = []
+    anchor_index = len(messages)
+    for index, message in enumerate(messages):
+        if _message_id(message) == anchor_message_id:
+            anchor_index = index
+            break
+        text = message_to_text(message).strip()
+        if text:
+            entries.append(f"{_message_role(message)}: {text[:4_000]}")
+
+    summary = str(values.get("summary_text") or "").strip()
+    if not summary:
+        user_entries = [item for item in entries if item.startswith(("human:", "user:"))]
+        summary = (user_entries[-1] if user_entries else (entries[0] if entries else ""))[:4_000]
+
+    # The snapshot is immutable Branch input. Keep the latest task turns before
+    # the selected answer, but never copy that entire answer into the Branch.
+    relevant = entries[max(0, len(entries) - 6) :]
+    full_history = entries[:anchor_index]
+    return summary, relevant, full_history
+
+
 def _last_question(body: RunCreateRequest) -> str:
     messages = (body.input or {}).get("messages") if isinstance(body.input, dict) else None
     if not isinstance(messages, list) or not messages:
@@ -122,9 +199,9 @@ def _last_question(body: RunCreateRequest) -> str:
 @router.post("", response_model=dict)
 async def create_branch(body: BranchCreateRequest, request: Request) -> dict[str, Any]:
     await _require_thread(request, body.main_thread_id)
-    anchor = AnchorSelection(**body.anchor.model_dump())
     parent_values = await _checkpoint_values(request, body.main_thread_id)
-    summary = body.root_summary.strip() or str(parent_values.get("summary_text") or "")
+    anchor = _validated_anchor(parent_values, body.anchor)
+    summary, relevant, main_history = _main_context_snapshot(parent_values, anchor.message_id)
     child_id = await _create_child_thread(
         request,
         {"branch_type": "anchored", "parent_thread_id": body.main_thread_id, "branch_status": "ACTIVE"},
@@ -134,7 +211,11 @@ async def create_branch(body: BranchCreateRequest, request: Request) -> dict[str
         child_thread_id=child_id,
         owner_id=_owner_id(request),
         anchor=anchor,
-        root_summary=summary,
+        main_task_summary=summary,
+        relevant_main_context=relevant,
+        main_history=main_history,
+        context_strategy=body.context_strategy,
+        token_budget=body.token_budget,
     )
     return record.to_dict()
 
@@ -152,19 +233,31 @@ async def get_branch(branch_id: str, request: Request) -> dict[str, Any]:
     return record.to_dict()
 
 
+@router.get("/{branch_id}/messages", response_model=list[dict])
+async def get_branch_messages(branch_id: str, request: Request) -> list[dict[str, str]]:
+    record = _get_branch(request, branch_id)
+    await _require_thread(request, record.child_thread_id)
+    return _message_items(await _checkpoint_values(request, record.child_thread_id))
+
+
 @router.post("/{branch_id}/runs/stream")
 async def stream_branch_run(branch_id: str, body: RunCreateRequest, request: Request) -> StreamingResponse:
     record = _get_branch(request, branch_id)
     await _require_thread(request, record.child_thread_id)
     values = await _checkpoint_values(request, record.child_thread_id)
     history = _message_history(values)
-    builder = BranchContextBuilder()
+    if record.status != "ACTIVE":
+        raise HTTPException(status_code=409, detail="closed Branches cannot start new runs")
+    builder = BranchContextBuilder(token_budget=record.token_budget)
     context = builder.build(
         record.anchor,
-        root_summary=record.root_summary,
+        main_task_summary=record.main_task_summary,
+        relevant_main_context=record.relevant_main_context,
+        main_history=record.main_history,
         branch_history=history,
         code_context=[record.anchor.code_context] if record.anchor.code_context else [],
         current_question=_last_question(body),
+        strategy=record.context_strategy,
     )
     body = body.model_copy(
         update={
@@ -191,41 +284,10 @@ async def stream_branch_run(branch_id: str, body: RunCreateRequest, request: Req
     )
 
 
-@router.post("/{branch_id}/decision", response_model=dict)
-async def create_branch_decision(branch_id: str, body: BranchDecisionRequest, request: Request) -> dict[str, Any]:
+@router.post("/{branch_id}/close", response_model=dict)
+async def close_branch(branch_id: str, request: Request) -> dict[str, Any]:
     record = _get_branch(request, branch_id)
     await _require_thread(request, record.main_thread_id)
-    if record.decision is not None:
-        return record.decision.to_dict()
-    decision = BranchDecision(
-        decision_id=f"decision_{uuid.uuid4().hex}",
-        branch_id=branch_id,
-        summary=body.summary.strip(),
-        actions=[item.strip() for item in body.actions if item.strip()],
-        constraints=[item.strip() for item in body.constraints if item.strip()],
-        rationale=body.rationale.strip(),
-    )
-    _store(request).save_decision(record, decision)
-    return decision.to_dict()
-
-
-@router.post("/{branch_id}/apply", response_model=dict)
-async def apply_branch_decision(branch_id: str, request: Request) -> dict[str, Any]:
-    branch_store = _store(request)
-    record = _get_branch(request, branch_id)
-    await _require_thread(request, record.main_thread_id)
-    if record.decision is None:
-        raise HTTPException(status_code=409, detail="create a BranchDecision before applying it")
-    if not record.decision.applied:
-        thread_store = get_thread_store(request)
-        await thread_store.update_metadata(
-            record.main_thread_id,
-            {"anchored_branch_decision": record.decision.to_dict(), "anchored_branch_id": record.branch_id},
-        )
-        await thread_store.update_metadata(record.child_thread_id, {"branch_status": "APPLIED"})
-        record = branch_store.mark_applied(record, record.decision.decision_id)
-        await thread_store.update_metadata(
-            record.main_thread_id,
-            {"anchored_branch_decision": record.decision.to_dict()},
-        )
-    return {"branch": record.to_dict(), "main_thread_id": record.main_thread_id, "applied": True}
+    record = _store(request).close(branch_id)
+    await get_thread_store(request).update_metadata(record.child_thread_id, {"branch_status": "CLOSED"})
+    return record.to_dict()

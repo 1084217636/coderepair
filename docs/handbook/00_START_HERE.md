@@ -9,7 +9,7 @@ DeerFlow 请求运行时
 → Worker 在固定提交的 Workspace 中校验、应用和测试
 → 用户从回答中创建 Anchored Branch
 → 有预算的 Branch Context
-→ 结构化 Decision 显式 Apply 回主 Thread
+→ 关闭 Branch，Main Thread 保持不变
 ```
 
 先区分三层事实：上游 DeerFlow 已有的 Agent Harness；本项目实际新增的 Code Change 与 Anchored Branch；尚未实现的生产化设想。简历只写前两层中能由代码和测试证明的内容。

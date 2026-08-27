@@ -10,7 +10,7 @@ Python async / HTTP / SSE
 → DeerFlow Runtime / LangGraph State
 → Tool / Middleware / Context / Memory / Skill / Sub-Agent
 → Repository Retrieval / Patch Agent / Workspace Test
-→ Anchored Branch / Context / Decision
+→ Anchored Branch / Context Isolation / Context Experiment
 → Security / Evaluation / Observability / Debugging
 → Code Map / Resume / Interview
 ```
@@ -18,7 +18,7 @@ Python async / HTTP / SSE
 ## 上游与个人实现
 
 - 上游 DeerFlow：Thread、Run、Checkpoint、Agent factory、通用 Tool/Middleware、Memory、Skill、Sub-Agent、SandboxProvider、StreamBridge/SSE 和工作台。
-- 个人新增：`deerflow.code_change`、受限 Patch Agent、Code Change API/控制台、`deerflow.anchored_branch`、Branch Context、Decision/Apply 及对应测试。
+- 个人新增：细粒度 Anchor、Main/Child 隔离、Branch Context Builder、双栏 UI 和三策略实验；Code Change 控制面与受限 Patch Agent 作为 Demo。
 - 未完成：生产级容器执行、在线模型修复率、真实人工接受率、真实 GitHub PR Provider 和多机共享任务控制面。
 
 ## 唯一阅读顺序
@@ -49,7 +49,7 @@ Python async / HTTP / SSE
 
 14. [13 Anchored Branch：从回答片段创建 Child Thread](13_ANCHORED_BRANCH.md)
 15. [14 BranchContextBuilder：预算、裁剪与提示注入](14_BRANCH_CONTEXT.md)
-16. [15 Decision 回流、Task 状态机与 Human-in-the-loop](15_DECISION_CONTROL_PLANE.md)
+16. [15 Code Change Task 状态机与 Human-in-the-loop](15_DECISION_CONTROL_PLANE.md)
 
 ### 第五阶段：工程质量与求职
 

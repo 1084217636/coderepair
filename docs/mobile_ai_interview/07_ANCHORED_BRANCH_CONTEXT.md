@@ -1,130 +1,173 @@
-# 07 Anchored Branch Context
+# 07 Anchored Branch Context：面试背诵稿
 
-## 问题 1：为什么要做 Anchored Branch
+## 一句话定位
+
+我没有发明对话分支。ChatGPT、Claude Code 等产品已有类似能力。我的二次开发重点是：针对长回答中的局部文本建立细粒度 Anchor，并研究独立 Branch 在“背景够用”和“不要携带无关主线”之间怎样分配上下文。
+
+## 30 秒项目回答
+
+用户读一段复杂回答时，常常只想追问其中一句或一个代码片段。直接在主对话继续问会让局部讨论污染后续主任务；新建空白对话又会丢背景。我的实现保存 Main message ID、选中文本 offset、Anchor 原文和可选代码引用，创建独立 Child Thread。每次 Branch Run 使用 `Main Task Summary + Anchor + Relevant Main Context + Branch History` 构造 Prompt，并受 Token Budget 限制。Branch 的消息、搜索和工具调用只进入 Child Checkpoint；默认关闭不会写 Main Thread。
+
+## 用户操作到后端的完整过程
+
+1. 左侧 Main Thread 正常显示 DeerFlow 对话。
+2. 每条助手消息 DOM 带 `data-branch-message-id`。用户选中文字后，前端读取 Selection、所属消息 ID 和渲染文本偏移，在选区旁显示 Ask in Branch。
+3. `POST /api/anchored-branches` 提交 Main Thread ID 和 Anchor。Gateway 先检查 Thread owner，再检查 message ID 确实存在、消息角色是 assistant、Anchor 原文确实出现在该回答中。渲染 offset 与 Markdown 原文不一致时，后端用原文重新定位。
+4. Gateway 创建 `branch-thread-*`、空 Checkpoint 和 Branch Record。Record 保存 parent/child 关系、Anchor、创建时的主任务摘要、相关主线上下文快照、上下文策略和预算。
+5. 用户在右栏提问时，请求进入 `/{branch_id}/runs/stream`。Gateway 只读取 Child Checkpoint 作为 Branch History，再由 `BranchContextBuilder` 生成隐藏 Context。
+6. 现有 `start_run`、Agent、Tool、Sandbox、StreamBridge 和 SSE 在 Child Thread 上运行。结果写 Child Checkpoint，Main Checkpoint 不变。
+7. 用户可以切换同一 Main 回答上的多个 Branch。关闭调用 `/close`，只更新 Branch Record 和 Child metadata。
+
+## 为什么一定要 Child Thread
+
+如果只在前端保存一个对话数组，刷新后会丢失，工具调用和 Checkpoint 也无法复用。如果把 Branch 消息追加到 Main Thread，虽然省事，但已经破坏了上下文隔离。
+
+Child Thread 直接复用 DeerFlow 已有的消息历史、Run、Checkpoint 和 SSE 生命周期。Branch Store 不再保存一份 `branch_messages`，所以没有双写一致性问题。我的自定义数据只描述“哪个 Main 消息的哪段文字，关联哪个 Child Thread”。
+
+这里的 Branch 不是 Git Branch，也不是 Sub-Agent。Git Branch 隔离代码版本；Sub-Agent 是 Lead Agent 内部委派；Anchored Branch 是用户可见、可继续多轮交互的独立对话。
+
+## BranchContextBuilder 到底放什么
+
+生产默认策略是 Anchored Context：
+
+```text
+Main Task Summary
++ Anchor
++ Relevant Main Context
++ Branch History
++ optional Code Context
++ Current Question
+```
+
+Main Task Summary 说明整个主任务在做什么。Anchor 是用户明确选中的原文，不能被摘要替换。Relevant Main Context 是创建分支前与当前任务有关的少量主线消息。Branch History 保证右栏可以多轮追问。Current Question 是本轮用户输入。
+
+当前实现用字符数除以四近似 Token。它不是计费级 tokenizer，但预算规则可复现。Anchor 和 Current Question 是硬保留项；两者连 Prompt 外壳都放不下时直接报错。其余内容超预算时依次删减，并返回 `truncated=true`。Prompt 用标签标明每段来源，Middleware 将它作为不在 UI 显示的 SystemMessage 注入。
+
+## 三种实验策略
+
+Full History 会复制完整主历史。优点是背景最完整；缺点是 Token 高、无关内容多，主对话越长越严重。
+
+Anchor Only 只给 Anchor、Branch History 和当前问题。优点是便宜、隔离最强；缺点是 Anchor 中的代词、前置约束和仓库背景可能无法解释。
+
+Anchored Context 加入主任务摘要和筛选后的相关内容。它不是理论上永远最好，而是需要通过固定任务实验验证的折中。
+
+实验固定同一模型、温度、工具、问题和预算，比较：回答正确率、背景信息遗漏率、无关上下文比例、Prompt Token，以及长 Branch 结束后 Main Thread 是否仍能继续原任务。默认脚本能确定计算 Context 指标；没有真实模型输出时 `answer_correct` 必须为 `null`，不能把关键词命中冒充模型准确率。
+
+## 为什么删除 Decision Capsule 和 Context Ledger
+
+它们解决的是长期记忆审核、冲突和版本治理，会引入 Accept/Edit/Reject、Stale、Conflict、Supersede 等额外状态。当前用户场景只是临时深入回答局部，强迫用户把每个 Branch 整理成 Decision 会增加操作负担，也让项目失去清晰边界。
+
+现在默认 Close 不影响 Main。唯一合理的可选增强是“带总结返回主线”：模型先生成简短总结，用户看见并点击确认后，才把它作为普通消息写进 Main。当前版本没有实现这个可选增强，不能说已经完成。
+
+## 上游能力与个人实现边界
+
+上游 DeerFlow 提供 Thread、Run、Checkpoint、Agent、Tool、SandboxProvider、StreamBridge 和 SSE。我实现的是 Anchor 领域模型、Main/Child 关系、锚点校验、Context Builder、隔离 API、双栏 UI、多 Branch 标记和三策略 Benchmark。Code Change 只用于展示 Branch 内也能调用现有搜索和代码工具，不是 Anchored Branch 的创新点。
+
+## 当前局限
+
+- Branch 索引是 owner 目录下的本机 JSON，不是多机数据库。
+- 相关主线上下文目前使用创建时的有限快照，还不是 Embedding/Rerank 检索。
+- Token 用字符近似，不是模型 tokenizer。
+- Anchor 在原回答被重新生成后不会自动漂移；当前依靠 message ID、offset 和原文校验。
+- 轻量 Anchor 标记由右栏同步到消息 DOM，生产级实现更适合提升为共享 React 状态。
+- 可选“总结返回主线”尚未实现。
+
+## 面试追问与回答
+
+### Branch 内调用搜索工具为什么不会污染 Main？
+
+因为 `start_run` 接收的是 `record.child_thread_id`，Checkpointer 的 configurable thread_id 也是 Child ID。模型消息、ToolMessage 和运行状态都落入 Child Checkpoint。Context Builder 对 Main 只读创建时快照；close 路由也没有 Main Thread update 调用。
+
+### 为什么不每轮重新读取最新 Main History？
+
+创建时快照让 Branch 的输入边界稳定，避免主线后来变化导致同一个 Branch 的背景悄悄改变。代价是它看不到创建后的新主线信息；如果未来需要同步，应设计显式 Refresh Context，而不是默认串线。
+
+### 为什么 Relevant Main Context 不是向量数据库？
+
+当前数据规模只是一个 Thread 内的少量消息，先用确定性窗口能够降低系统复杂度，也便于解释和测试。只有当对话很长、窗口召回明显不足，并且离线评测证明语义检索提升质量时，Embedding/Rerank 才值得引入。
+
+### 多个 Branch 会互相看到历史吗？
+
+不会。每个 Branch 有独立 child_thread_id。Branch Record 的 list 接口只是让 UI 展示索引，不会把另一个 Child Checkpoint 传进当前 Builder。
+
+### 关闭 Branch 后数据是否删除？
+
+没有物理删除。状态变为 CLOSED，不能再启动新 Run，历史仍可查看。这既避免误删，也让刷新后能解释之前讨论过什么；但它不是长期 Decision Memory。
+
+## 问题 1：为什么做细粒度 Anchored Branch，而不是普通新对话
 
 ### 面试官问
 
-这个功能解决什么问题，为什么不直接新建一个普通对话？
+这个功能解决什么问题，和现有产品的 Branch 有什么区别？
 
 ### 30 秒回答
 
-长对话里经常只想深入某一段回答。直接在主 Thread 继续问，会让局部问题和主任务互相干扰；新建普通对话又会丢掉选中段落和必要背景。Anchored Branch 让用户选择一段 Anchor，系统创建带 `parent_thread_id` 的 Child Thread，并给每次分支 Run 注入 Anchor、主线摘要、局部历史、代码上下文和当前问题。讨论完成后只回流结构化 Decision，不复制整段聊天。
+我不宣称首创 Branch。我的问题是长回答中的局部追问：普通主线追问会污染后续任务，空白新对话又缺背景。我用 message ID、offset 和原文建立细粒度 Anchor，再创建独立 Child Thread，重点研究上下文隔离和背景保留的平衡。
 
 ### 详细回答
 
-普通分支对话有两个极端。
-
-第一种是复制主对话全部历史。上下文很完整，但 Token 成本高，局部问题容易被无关内容淹没，而且主对话越长越难控制。
-
-第二种是只新建空白对话。成本低，但用户还要重新解释原问题、代码位置和约束。
-
-Anchored Branch 取中间方案。用户从主回答中选择一段文本，这段 Anchor 是分支的核心事实。系统同时保存主 Thread id、Child Thread id、可选消息位置、文件、Symbol 和代码上下文。Child Thread 仍然使用 DeerFlow 原有的 Run、Checkpoint 和 SSE，因此分支有自己的消息历史，但没有再实现一套消息数据库。
-
-分支结束时，用户将结论整理成 `BranchDecision`，包括 summary、actions、constraints 和 rationale。点击 Apply 只把这个决策写回主 Thread metadata。下一次主 Thread Run 读取它并注入 Agent Context。这样回流的是经过人确认的结论，不是几十轮原始对话。
+Anchor 明确指出“针对哪条助手回答的哪段文字”。Child Thread 让局部讨论拥有独立消息、Checkpoint、Run 和工具调用。一个回答能有多个 Branch，用户关闭右栏后仍停留在左侧原回答。默认没有审核、Decision 或回写动作，符合临时深入一个局部问题的操作成本。
 
 ### 结合当前 CodeRepair 源码
 
-- `anchored_branch/models.py::AnchorSelection` 保存选中文本和可选代码位置。
-- `frontend/src/components/workspace/anchored-branch-panel.tsx` 提供分支创建、问答、Decision 和 Apply 交互。
-- `frontend/src/core/anchored-branch/api.ts` 调用分支 REST 和 SSE 接口。
-- `app/gateway/routers/anchored_branch.py::_create_child_thread` 创建 `branch-thread-*` 和空 Checkpoint。
-- Child Thread metadata 包含 `branch_type=anchored`、`parent_thread_id` 和 ACTIVE 状态。
-- `AnchoredBranchStore` 只保存分支索引、Anchor 和 Decision，消息仍在 DeerFlow Thread/Checkpoint。
-- `stream_branch_run` 使用已有 `start_run`、StreamBridge 和 `sse_consumer`。
+`message-list-item.tsx` 暴露消息 ID，`anchored-branch-panel.tsx` 捕获 Selection；`anchored_branch.py::_validated_anchor` 校验来源；`_create_child_thread` 和 `AnchoredBranchStore.create` 建立关系。
 
 ### 技术选型与替代
 
-可以只用前端临时状态，把 Anchor 拼进下一条 Prompt。实现更快，但刷新后分支丢失，也没有独立 Thread、Checkpoint 和审计记录。
-
-也可以复制全量主 Thread。实现简单但成本高，且分支与主线的边界不清。Child Thread 加引用和有预算 Context 更适合长期对话。
+只用前端数组最简单，但刷新即丢；复制 Main Thread 最省后端代码，但破坏隔离。复用 DeerFlow Child Thread 能避免重写消息、Checkpoint 和 SSE。
 
 ### 边界与追问
 
-上游 DeerFlow 的 Thread、Run、Checkpoint、SSE 和 Lead Agent 是复用能力。个人新增的是 Anchor 领域、Child Thread 关系、Context Builder、Decision 和 Apply 流程。
+当前 Anchor 不会在回答重新生成后自动漂移，Store 也是单机 JSON。这是可演示的上下文工程原型，不是多人协作文档锚点系统。
 
-## 问题 2：Branch Context 怎样控制 Token，又不丢掉核心信息
+## 问题 2：怎样证明 Main Thread 与 Branch 真正隔离
 
 ### 面试官问
 
-上下文超出窗口怎么办？你按什么优先级截断？
+你怎么证明 Branch 中的多轮讨论和工具调用不会写进主线？
 
 ### 30 秒回答
 
-`BranchContextBuilder` 把 Anchor 和当前问题设为硬保留项，它们合计超预算就直接报错，不会偷偷摘要。剩余预算先给有限的主线摘要，再从最近的分支历史向前保留，最后加入代码上下文。当前默认预算 6000 Token，用字符数除以四做估算，并返回 `truncated` 标记。这个规则简单但可解释，保证分支不会失去用户明确选择的锚点。
+Branch Run 的历史读取、Checkpointer thread_id 和 `start_run` 目标全部是 child_thread_id。Main 只在创建时被只读并形成快照。Close 只更新 Child metadata。单测直接断言运行目标是 Child、关闭没有 Main update。
 
 ### 详细回答
 
-Context Builder 的输入包括：Anchor、root summary、branch history、code context 和 current question。
-
-第一步清洗文本，去掉多余空白并限制单项长度。当前问题不能为空。Anchor 不能大于整个预算估算值，Anchor 与当前问题加起来也不能超过预算。这里选择报错，是因为静默截断 Anchor 会改变用户选择的含义。
-
-第二步处理主线摘要。摘要最多 4000 字符，也会根据剩余预算缩短。如果缩短，`truncated=True`。
-
-第三步选分支历史。系统从最近消息向前遍历，但最多使用可用空间的一半，保证代码上下文仍有空间。被保留的历史最后恢复成时间顺序。
-
-第四步按输入顺序加入代码上下文，空间不足就停止。最后将所有内容合并，用总字符数除以四估算 Token。
-
-`to_prompt` 用 XML 风格标签区分不同来源，并明确告诉模型这些内容是 Context，不是指令。这能降低结构混淆，但不能彻底阻止源码里的 Prompt Injection。
+创建阶段读取 Main 是为了校验 Anchor 和获取有限背景，不会追加消息。运行阶段 `_checkpoint_values` 只读 Child，Branch History 也来自 Child；Agent 和 ToolMessage 随该 Run 写 Child Checkpoint。Store 中的 parent ID 只是关联，不会让 Checkpointer 自动合并。关闭阶段若错误调用 Main update，隔离测试会失败。
 
 ### 结合当前 CodeRepair 源码
 
-- `anchored_branch/context.py::BranchContextBuilder` 实现预算算法。
-- `_clean` 压缩空白并限制字符串长度。
-- `_entry` 把字符串或字典规范成文本。
-- `BranchContext.to_prompt` 生成 `<anchor>`、`<root_summary>`、`<branch_history>`、`<code_context>` 和 `<current_question>`。
-- `AnchoredBranchContextMiddleware.before_model` 将 Prompt 作为隐藏 SystemMessage 注入。
+看 `routers/anchored_branch.py::stream_branch_run`、`close_branch`，再看 `tests/code_change/test_anchored_branch.py::test_branch_run_targets_child_checkpoint_and_child_run` 和 `test_close_branch_updates_child_only`。
 
 ### 技术选型与替代
 
-更精确的实现会用当前模型 tokenizer，并按消息角色、代码块和 Symbol 做分段预算。还可以对旧分支历史做增量摘要，或者使用检索只选与当前问题相关的代码。
-
-当前固定优先级的优点是稳定、容易测试；缺点是最近历史不一定最相关，代码上下文也没有语义重排。
+可以在同一 Thread 给消息加 branch_id 过滤，但所有查询、摘要和工具状态都必须记得过滤，漏一次就串线。物理使用不同 Thread ID 的隔离边界更清楚。
 
 ### 边界与追问
 
-6000 是 Branch Context 的应用预算，不等于模型完整上下文窗口。完整请求还包括 system prompt、Tool 描述和其他 Middleware 消息。
+Branch Store 与 Thread Store 仍是两类持久化，创建过程不是跨库事务；若 Child 创建后索引保存失败，需要补偿清理。当前重点验证运行时不串线，不宣称解决分布式事务。
 
-`estimated_tokens` 是近似值，不能当成实际计费数据。
-
-## 问题 3：Decision、Apply 和 HITL 怎样工作
+## 问题 3：Branch Context Builder 为什么比 Full History 或 Anchor Only 合理
 
 ### 面试官问
 
-分支讨论结束后，Apply 会不会直接修改主对话或代码？
+你如何构造 Prompt，又怎样评价策略好坏？
 
 ### 30 秒回答
 
-不会。分支先保存结构化 `BranchDecision`，用户显式 Apply 后，系统把 Decision 写到主 Thread metadata，并把分支标为 APPLIED。下一次主 Thread Run 会从 metadata 取出 Decision，放进 runtime context，再由 Middleware 注入 SystemMessage。Decision 只是人确认的约束，不是代码修改命令；主 Agent 若要改代码，仍需走原来的 Tool、Sandbox 和测试链。
+默认组合主任务摘要、Anchor、相关主线上下文、Branch History 和当前问题，并受 Token Budget 控制。实验用相同模型和任务比较 Full History、Anchor Only、Anchored Context 的正确率、背景遗漏、无关比例、Token 和长分支后的主任务恢复能力。
 
 ### 详细回答
 
-Decision 分两步处理。
-
-第一步 create decision。请求必须包含 summary，可以附加 actions、constraints 和 rationale。一个分支已经有不同 Decision 时不能静默覆盖。这样用户有机会先检查结构化结论。
-
-第二步 apply。没有 Decision 时返回 409。Apply 更新主 Thread metadata 中的 `anchored_branch_decision` 和 branch id，更新 Child Thread 状态，并在 AnchoredBranchStore 中把 Decision 标记 applied，记录时间。
-
-主线下一次执行时，Gateway 的 `start_run` 读取 Thread metadata，把 Decision 加到 `config.context.branch_decision`。Lead Agent 构造阶段发现 branch decision 后，装配 `AnchoredBranchContextMiddleware`。Middleware 生成隐藏 SystemMessage，告诉 Agent 这是人工审阅的约束，并明确禁止在没有 Tool 证据时声称代码已修改。
-
-这个设计把"讨论结论"和"执行动作"分开。用户批准的是一份 Decision，不是授权系统跳过工具直接修改代码。
+Full History 背景多但噪声和成本高；Anchor Only 隔离强但容易缺前置约束；Anchored Context 是可验证的折中。Anchor 和当前问题硬保留，可选内容超预算时删除并标记 truncated。Branch History 三组都保留，否则无法公平测试多轮 Branch。没有真实模型输出时只报告 Context 指标，回答正确率保持 null。
 
 ### 结合当前 CodeRepair 源码
 
-- `anchored_branch/models.py::BranchDecision` 定义结构化字段和 applied 状态。
-- `anchored_branch.py::create_branch_decision` 创建 Decision。
-- `apply_branch_decision` 更新主、子 Thread metadata 和分支 Store。
-- `app/gateway/services.py::start_run` 将 metadata Decision 注入 run context。
-- `agents/lead_agent/agent.py` 按 context 决定是否加入 Anchored Middleware。
-- `anchored_branch/middleware.py` 创建隐藏 SystemMessage。
+`anchored_branch/context.py::BranchContextBuilder.build` 实现三策略和预算；`middleware.py` 注入隐藏 Context；`benchmark.py::run_benchmark` 输出同一 case 下的三组指标。
 
 ### 技术选型与替代
 
-可以把整段分支 Transcript 追加到主对话，但噪声大且可能包含中间错误。结构化 Decision 更适合审阅、检索和审计。
-
-如果未来多人协作，还应给 Apply 增加权限、版本号和乐观锁，防止两个用户对同一分支提交冲突决策。
+当前使用确定性有限快照，便于解释。只有评测证明窗口召回不足时才引入 Embedding/Rerank；只有字符估算误差影响预算时才接模型 tokenizer。
 
 ### 边界与追问
 
-Apply 不会 cherry-pick Git 分支，也不会合并数据库中的消息树。这里的 Branch 是对话上下文分支，不是 Git branch。
-
-当前 AnchoredBranchStore 仍是本机 owner 目录中的 JSON 文件，不是多机共享数据库。
+默认 Benchmark 不是在线模型评测。回答正确率需要保存真实输出和人工或规则金标准；长分支后恢复能力也需要单独任务集，不能从 Prompt Token 推断。
