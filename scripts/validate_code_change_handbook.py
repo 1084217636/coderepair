@@ -11,12 +11,23 @@ from urllib.parse import unquote
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 HANDBOOK_DIR = REPO_ROOT / "docs" / "handbook"
+MOBILE_DIR = REPO_ROOT / "docs" / "mobile_ai_interview"
 NUMBERED_CHAPTER = re.compile(r"^\d{2}_.+\.md$")
 MARKDOWN_LINK = re.compile(r"(?<!!)\[[^]]+\]\(([^)]+)\)")
 
 READING_HEADER = "## 本章代码阅读任务"
 SELF_TEST_HEADER = "## 本章自测"
 ANSWER_HEADER = "## 参考答案"
+MOBILE_ANSWER_SECTIONS = (
+    "### 面试官问",
+    "### 30 秒回答",
+    "### 详细回答",
+    "### 结合当前 CodeRepair 源码",
+    "### 技术选型与替代",
+    "### 边界与追问",
+)
+
+
 def validate_learning_contract(path: Path) -> list[str]:
     text = path.read_text(encoding="utf-8")
     errors: list[str] = []
@@ -65,10 +76,27 @@ def validate_learning_contract(path: Path) -> list[str]:
         if not questions:
             errors.append(f"{path.relative_to(REPO_ROOT)}: 自测部分没有编号题目")
         elif len(answers) < len(questions):
-            errors.append(
-                f"{path.relative_to(REPO_ROOT)}: 参考答案少于自测题目"
-            )
+            errors.append(f"{path.relative_to(REPO_ROOT)}: 参考答案少于自测题目")
 
+    return errors
+
+
+def validate_mobile_contract(path: Path) -> list[str]:
+    text = path.read_text(encoding="utf-8")
+    relative = path.relative_to(REPO_ROOT)
+    errors: list[str] = []
+    question_count = len(re.findall(r"^## 问题 \d+：", text, re.M))
+    if question_count < 3:
+        errors.append(f"{relative}: 至少需要 3 道可直接背诵的面试题")
+    for header in MOBILE_ANSWER_SECTIONS:
+        actual = len(re.findall(rf"^{re.escape(header)}$", text, re.M))
+        if actual != question_count:
+            errors.append(
+                f"{relative}: `{header}` 数量为 {actual}，应与问题数量 {question_count} 一致"
+            )
+    for unfinished in ("待补充", "再去问 AI", "继续向 AI 提问"):
+        if unfinished in text:
+            errors.append(f"{relative}: 包含未完成学习指令 `{unfinished}`")
     return errors
 
 
@@ -90,9 +118,7 @@ def validate_local_links(path: Path) -> list[str]:
         try:
             resolved.relative_to(REPO_ROOT)
         except ValueError:
-            errors.append(
-                f"{path.relative_to(REPO_ROOT)}: 链接越出仓库 `{raw_target}`"
-            )
+            errors.append(f"{path.relative_to(REPO_ROOT)}: 链接越出仓库 `{raw_target}`")
             continue
 
         if not resolved.exists():
@@ -149,7 +175,44 @@ def main() -> int:
     for path in chapters:
         errors.extend(validate_learning_contract(path))
 
-    for path in [HANDBOOK_DIR / "README.md", REPO_ROOT / "docs" / "README.md", *chapters]:
+    expected_mobile_names = {
+        "01_GO_BACKEND_TO_AI.md",
+        "02_LLM_AGENT_DEERFLOW.md",
+        "03_CONTROL_PLANE_TASK_API.md",
+        "04_PATCH_AGENT_RETRIEVAL.md",
+        "05_WORKSPACE_PATCH_TEST.md",
+        "06_STATE_QUEUE_HITL.md",
+        "07_ANCHORED_BRANCH_CONTEXT.md",
+        "08_SECURITY_EVALUATION_FAILURE.md",
+        "09_PROJECT_INTERVIEW.md",
+    }
+    mobile_chapters = (
+        sorted(
+            path for path in MOBILE_DIR.iterdir() if NUMBERED_CHAPTER.match(path.name)
+        )
+        if MOBILE_DIR.is_dir()
+        else []
+    )
+    actual_mobile_names = {path.name for path in mobile_chapters}
+    errors.extend(
+        f"docs/mobile_ai_interview: 缺少章节 `{name}`"
+        for name in sorted(expected_mobile_names - actual_mobile_names)
+    )
+    errors.extend(
+        f"docs/mobile_ai_interview: 未登记的编号章节 `{name}`"
+        for name in sorted(actual_mobile_names - expected_mobile_names)
+    )
+    for path in mobile_chapters:
+        errors.extend(validate_mobile_contract(path))
+
+    for path in [
+        HANDBOOK_DIR / "README.md",
+        MOBILE_DIR / "README.md",
+        REPO_ROOT / "docs" / "README.md",
+        REPO_ROOT / "docs" / "README_STUDY.md",
+        *chapters,
+        *mobile_chapters,
+    ]:
         if path.exists():
             errors.extend(validate_local_links(path))
 
@@ -161,7 +224,8 @@ def main() -> int:
 
     print(
         f"PASS CodeRepair handbook: {len(chapters)} chapters have exact reading tasks, "
-        "same-file answers, and valid local links"
+        f"same-file answers; {len(mobile_chapters)} mobile chapters have complete interview answers; "
+        "all checked local links are valid"
     )
     return 0
 

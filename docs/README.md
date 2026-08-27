@@ -1,8 +1,8 @@
 # CodeRepair 文档入口
 
-学习项目只走一条路线：[CodeRepair AI 工程与 Agent 开发学习手册](handbook/README.md)。请从 00 章按编号读到 21 章；`docs/coderepair/` 是开发阶段记录，不是第二套学习顺序。
+系统学习走 [CodeRepair AI 工程与 Agent 开发学习手册](handbook/README.md)，请从 00 章按编号读到 21 章。通勤和面试背诵使用 [CodeRepair 手机背诵手册](mobile_ai_interview/README.md)，其中已经写好可直接口述的 30 秒回答、详细回答、源码证据、技术选型和能力边界。`docs/coderepair/` 是开发阶段记录，不是另一套学习顺序。
 
-`handbook/00_START_HERE.md` 到 `handbook/21_AI_ASSISTED_AGENT_DEVELOPMENT.md` 是当前唯一教材。最后一章专门记录 AI 辅助开发的真实故障、项目与公司工作的差异和面试口径。每章包含：
+`handbook/00_START_HERE.md` 到 `handbook/21_AI_ASSISTED_AGENT_DEVELOPMENT.md` 是当前唯一系统源码教材。手机手册只负责背诵和面试复述，不能替代第一次源码学习。系统手册最后一章专门记录 AI 辅助开发的真实故障、项目与公司工作的差异和面试口径。每章包含：
 
 - 本章目标和第一次出现的概念。
 - 当前方案解决的问题与选择理由。

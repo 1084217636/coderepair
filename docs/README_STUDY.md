@@ -1,5 +1,7 @@
 # CodeRepair 学习入口
 
+如果已经完成第一轮源码学习，或需要在手机上通勤背诵，直接使用 [`mobile_ai_interview/README.md`](mobile_ai_interview/README.md)。这套短章节不要求继续向 AI 提问，每道题都给出可直接口述的项目答案、八股基础、源码证据、选型理由和边界。
+
 CodeRepair 的主学习资料在 [`handbook/README.md`](handbook/README.md)。手册按 00 到 21 编号，先补 LLM 与 Agent 工程基础，再进入 DeerFlow Runtime、受限 Coding Agent、Anchored Branch Context、安全评测、真实故障与面试。第一次学习时只按这一套顺序读。
 
 每一章都包含两块固定内容：
