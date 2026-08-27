@@ -11,13 +11,13 @@
 技术栈：
 
 ```text
-Python / FastAPI / Pydantic / pytest / Git diff / DeerFlow / Agent Workflow / RAG / Sandbox / GitHub PR
+Python / FastAPI / Pydantic / DeerFlow / LangGraph / Tool Calling / Git / pytest / Next.js
 ```
 
 项目描述：
 
 ```text
-基于字节开源 DeerFlow Agent harness 二次开发项目级代码变更平台，支持项目空间、仓库扫描、上下文召回、Patch 应用、隔离测试、失败重试、审计日志和 PR handoff，形成从需求到 PR 审核材料的闭环。
+基于 DeerFlow 二次开发的 Client-Server Coding Agent 平台。Web 客户端通过 FastAPI 控制面提交代码变更任务，受限 Patch Agent 使用 search/read/typed-submit Tool 生成候选 unified diff，Worker 在固定 Git commit 的独立 Workspace 中完成校验、测试、报告和人工审核材料生成。
 ```
 
 ## 2. 简历 bullet
@@ -25,25 +25,22 @@ Python / FastAPI / Pydantic / pytest / Git diff / DeerFlow / Agent Workflow / RA
 可以直接放简历：
 
 ```text
-- 基于 DeerFlow Agent harness 二次开发项目级 AI 代码变更平台，设计 project/task/timeline/audit 数据模型，将一次代码修改拆分为上下文召回、Patch 应用、测试验证、报告生成和 PR handoff 等可审计阶段。
-- 实现代码变更任务状态机和 Worker 执行流，支持 `QUEUED、PLANNING、RETRIEVING_CONTEXT、PATCH_RECEIVED、VALIDATING_PATCH、APPLYING_PATCH、RUNNING_TESTS、HANDOFF_READY、FAILED` 等状态，并通过 JSONL 队列解耦 API 请求与长耗时测试执行。
-- 构建轻量代码仓库 RAG 流程，通过仓库扫描、文件摘要和关键词 Top-K 召回定位相关代码，为后续升级符号索引、BM25 和 embedding 检索预留扩展点。
-- 引入 workspace 隔离执行和 sandbox policy，避免 AI Patch 直接污染主仓库；测试命令使用 shell=False、命令白名单、超时和日志截断，提升执行边界和审计能力。
-- 实现失败任务 retry、worker metrics、task_report、audit.json、pr_body.md、pr_handoff.json 和 draft PR 脚本生成，让代码变更从需求到人工审核材料形成完整闭环。
+- 基于 DeerFlow Agent Harness 二次开发 Coding Agent 工作流，将模型的概率性代码生成限制在 search、read 和 typed patch submit Tool 内，并把 Patch 应用、测试和审核交给确定性 Worker 执行。
+- 设计 Task 状态机与独立 Workspace 执行链路，将任务固定到源 Git commit，依次完成路径检查、`git apply --check`、服务端测试模板、超时进程组清理、报告和审计记录，避免候选 Patch 直接污染登记仓库。
+- 实现 Anchored Branch Context，从主对话回答中创建 Child Thread，按预算组合 Anchor、摘要、局部历史、代码上下文和当前问题，并通过结构化 Decision 和人工 Apply 显式回流主 Thread。
 ```
 
-如果简历空间不够，可以压缩成 3 条：
+如果简历空间不够，可以压缩成 2 条：
 
 ```text
-- 基于 DeerFlow 二次开发项目级 AI 代码变更平台，支持项目空间、上下文召回、Patch/Test、审计日志和 PR handoff，形成需求到 PR 审核材料闭环。
-- 设计任务状态机与 Worker 队列，解耦 API 与长耗时执行流程，支持失败 retry、metrics、timeline 和 artifact 留存。
-- 引入 workspace 隔离与 sandbox policy，使用 git apply --check、shell=False、命令白名单和测试日志提升 AI 代码变更的可验证性。
+- 基于 DeerFlow 二次开发 Client-Server Coding Agent 平台，以受限 search/read/typed-submit Tool 生成候选 Patch，并由 Worker 在固定 Git commit 的独立 Workspace 中完成校验、测试、报告与人工审核。
+- 设计 Anchored Branch Context 和结构化 Decision/Apply 机制，按预算组织回答片段、局部历史与代码上下文，降低长对话污染并保留人工决策边界。
 ```
 
 ## 3. 1 分钟介绍
 
 ```text
-我做的项目是基于 DeerFlow 的二次开发，不是重新写一个 Agent。DeerFlow 本身提供 Agent、memory、sandbox、tools 和 gateway 这些底座，我在它上面补了一个企业研发场景里的代码变更任务流。用户创建项目后绑定仓库和测试命令，提交需求或 patch，平台会扫描仓库、召回相关代码、在隔离 workspace 里应用 patch、执行测试、记录 timeline 和 audit，成功后生成 PR handoff。这个项目重点不是证明模型会写代码，而是把 AI 代码修改变成可追踪、可测试、可审核的研发流程。
+这是一个基于 DeerFlow 二次开发的 Coding Agent 项目。整体采用 Client-Server 架构，Web 客户端通过 FastAPI 控制面创建任务，Patch Agent 只能搜索、读取代码并通过 typed Tool 提交候选 diff，不能直接修改登记仓库。Worker 把任务固定到源 commit，在独立 Workspace 中完成路径校验、Patch 应用、测试、报告和人工审核材料生成。我还实现了 Anchored Branch Context，把回答片段和局部代码上下文放入 Child Thread，通过结构化 Decision 由用户决定是否回流主对话。项目重点是分离模型生成和确定性执行，而不是宣称模型可以全自动修复任意代码。
 ```
 
 ## 4. 3 分钟介绍

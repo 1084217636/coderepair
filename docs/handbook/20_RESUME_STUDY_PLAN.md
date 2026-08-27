@@ -4,6 +4,18 @@
 
 > 基于 DeerFlow 2.0 二次开发可审计 Coding Agent：以最小权限 search/read/typed-submit Tool 生成候选 unified diff，并在固定 Git commit 的 Workspace 中完成路径校验、服务端测试模板、报告与人工审批；实现 Anchored Branch Context，将回答片段、摘要、局部历史、代码上下文和当前问题按预算组合，通过结构化 Decision 显式回流主 Thread。
 
+简历中的专业短版：
+
+```text
+基于 DeerFlow 二次开发 Client-Server Coding Agent 平台。FastAPI 控制面负责项目与任务生命周期，受限 Patch Agent 负责代码检索和候选 diff 生成，Worker 在固定 Git commit 的独立 Workspace 中执行确定性校验、测试和报告；通过 Anchored Branch Context 与结构化 Decision/Apply 保留上下文隔离和人工审核边界。
+```
+
+简历正文建议使用三条：
+
+- 将模型能力限制在 search、read、typed patch submit Tool 内，分离概率性生成与确定性执行，避免 Agent 直接修改登记仓库或把自然语言回答当成已验证结果。
+- 设计 Task 状态机和 Workspace 执行链路，在固定源 commit 上完成路径检查、Patch 校验/应用、服务端测试模板、超时进程清理、报告和审计记录。
+- 实现 Anchored Branch Context，将回答片段、摘要、局部历史、代码上下文与当前问题按预算注入 Child Thread，并通过结构化 Decision/Apply 由用户显式回流主 Thread。
+
 不能写：自研 DeerFlow/LangGraph、生产级分布式 Worker、自动创建合并 PR、在线模型高修复率、真实人工接受率或强容器 Sandbox。
 
 ## 六周学习计划
