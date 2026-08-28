@@ -1,0 +1,8 @@
+flowchart LR
+  S[HumanMessage + bounded code context] --> G[create_deerflow_agent Graph]
+  G --> L[Chat model invoke]
+  L --> D{tool_calls?}
+  D -->|yes| TN[LangGraph ToolNode]
+  TN --> R[ToolMessage]
+  R --> G
+  D -->|no| END[Final AIMessage]

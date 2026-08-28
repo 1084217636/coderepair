@@ -1,0 +1,17 @@
+flowchart TB
+  U[User / Browser] --> API[FastAPI API]
+  API --> CC[Code Change Task]
+  CC --> R[Retrieval + Context Budget]
+  R --> A[DeerFlow Agent Graph]
+  A --> LLM[LLM]
+  LLM --> T[Typed Tools]
+  T --> A
+  A --> W[Workspace + Patch + Test]
+  W --> REP[Diff / Report]
+  U --> MT[Main Thread]
+  MT --> AN[Anchor]
+  AN --> BT[Child Branch Thread]
+  BT --> BC[Branch Context]
+  BC --> BR[DeerFlow Run + SSE]
+  BR --> U
+  BT -. no automatic merge .-> MT

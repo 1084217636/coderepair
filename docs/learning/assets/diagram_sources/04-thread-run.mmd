@@ -1,0 +1,10 @@
+flowchart LR
+  U[Browser Main Chat] --> T[Thread]
+  T --> R[Run]
+  R --> RM[RunManager + StreamBridge]
+  RM --> AG[Agent Runtime]
+  AG --> CP[Checkpoint / Thread state]
+  AG --> SSE[SSE consumer]
+  SSE --> U
+  T --> B[Anchored Branch Child Thread]
+  B --> BR[Independent Branch Run]

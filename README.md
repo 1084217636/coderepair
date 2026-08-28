@@ -21,7 +21,7 @@ DeerFlow 的 Thread、Run、Checkpoint、Agent、Tool、Sandbox、Middleware 和
 
 ## 第一次学习
 
-学习本项目时只看 [CodeRepair AI 工程与 Agent 开发学习手册](docs/handbook/README.md)，从第 00 章按编号读到第 21 章。它先补 LLM/Agent 基础，再进入项目实现、安全评测、真实开发故障和面试；其他 docs 不构成第二套顺序。
+第一次学习请先读 [真实源码调用链学习包](docs/learning/00-project-overview.md)，按 `00` 到 `10` 的顺序完成。它以当前 Coding Agent 和 Anchored Branch 的实际调用为主线，所有流程图都已渲染为 PNG，可直接在 Typora 阅读。完成后再把 [CodeRepair AI 工程与 Agent 开发学习手册](docs/handbook/README.md) 当作概念补充和扩展问答；两套材料的项目边界以源码和 learning 文档为准。
 
 ## 个人二开的当前实现
 

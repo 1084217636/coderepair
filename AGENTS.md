@@ -125,5 +125,10 @@ These apply repo-wide; module guides own the module-specific detail.
   context isolation. Keep real-model evaluation limited to the 12-task Agent suite and the
   12-case three-strategy Context suite. Do not add Decision Ledger, GraphRAG, distributed
   workers, extra providers, or automatic GitHub PR features to this scope.
+- **Learning documentation** — `docs/learning/00-project-overview.md` through `10-reading-plan.md`
+  are the source-traced onboarding path for this extension. Keep every implementation claim tied
+  to a real file/function. Required diagrams live as committed PNGs under
+  `docs/learning/assets/diagrams/`; keep editable Mermaid sources in `diagram_sources/` and do
+  not rely on Mermaid blocks in the learner-facing Markdown.
 - **Format before pushing** — run `make format` (backend) / `pnpm check` (frontend). Backend
   CI enforces `ruff format --check`, so formatting must be clean before a push.

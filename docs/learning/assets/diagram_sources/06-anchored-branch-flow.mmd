@@ -1,0 +1,14 @@
+flowchart TB
+  M[Main assistant answer] --> S[User selected text]
+  S --> A[AnchorSelection]
+  A --> C[create_branch]
+  C --> CT[Child Thread + BranchRecord]
+  CT --> Q[Branch question]
+  Q --> R{linked code project?}
+  R -->|yes| RET[Hybrid Retrieval]
+  R -->|no| BC
+  RET --> BC[BranchContextBuilder]
+  BC --> RUN[start_run child thread]
+  RUN --> SSE[SSE response]
+  SSE --> UI[Branch Panel]
+  UI -. close does not write Main .-> M

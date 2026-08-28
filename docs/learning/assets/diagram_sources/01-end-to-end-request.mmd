@@ -1,0 +1,12 @@
+flowchart LR
+  F[Code Change Console] -->|POST task| API[code_change.py::run_project_task]
+  API --> Q[worker.py::create_task]
+  Q --> WK[worker.py::run_next_task]
+  WK --> EX[worker.py::execute_task]
+  EX --> RET[scan_repo + retrieve_context]
+  RET --> AG[agent_patch.py::generate_patch_with_agent]
+  AG --> G[create_deerflow_agent]
+  G --> M[LLM + Tool Loop]
+  M --> EX
+  EX --> WS[Workspace Patch Test]
+  WS --> R[Report API / Console]

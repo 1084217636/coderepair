@@ -1,0 +1,10 @@
+flowchart TB
+  Q[Requirement + Prompt] --> M[Model API Function Calling]
+  M --> C[AIMessage.tool_calls]
+  C --> F[DeerFlow create_deerflow_agent / ToolNode]
+  F --> T[Project Tool: code_change_read_file]
+  T --> P[_safe_repo_file + bounded read]
+  P --> O[Tool result text]
+  O --> TM[ToolMessage]
+  TM --> M
+  M --> A[Final answer or typed patch submit]

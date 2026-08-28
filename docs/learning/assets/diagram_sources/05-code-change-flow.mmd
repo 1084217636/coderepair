@@ -1,0 +1,12 @@
+flowchart TB
+  U[Task Requirement] --> W[Worker claim task]
+  W --> C[Copy pinned commit to Workspace]
+  C --> R[Retrieve relevant code]
+  R --> A[Read-only Patch Agent]
+  A --> P[typed unified diff]
+  P --> V[git apply --check]
+  V -->|valid| AP[apply in Workspace]
+  V -->|invalid| FB[one correction prompt or FAILED]
+  AP --> T[server-approved test command]
+  T -->|pass| H[HANDOFF_READY + report]
+  T -->|fail| F[FAILED + test.log]

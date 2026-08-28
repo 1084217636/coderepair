@@ -1,0 +1,21 @@
+flowchart LR
+  subgraph U[DeerFlow upstream]
+    TH[Thread / Run / Checkpoint]
+    AH[Agent Factory / LangGraph]
+    TF[Tool runtime]
+    MW[Middleware framework]
+    SS[SSE / StreamBridge]
+    SB[SandboxProvider abstraction]
+  end
+  subgraph P[Project composition]
+    CA[Restricted Patch Agent]
+    RC[Retrieval Context]
+    CW[Workspace Test Worker]
+  end
+  subgraph X[Project additions]
+    AN[AnchorSelection]
+    BR[BranchRecord / Store]
+    BC[BranchContextBuilder]
+    UI[Branch Panel]
+  end
+  U --> P --> X
