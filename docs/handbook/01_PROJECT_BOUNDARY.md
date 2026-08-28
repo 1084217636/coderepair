@@ -9,14 +9,14 @@
 | 范围 | 内容 |
 | --- | --- |
 | 上游 DeerFlow | Thread、Run、Checkpoint、Lead Agent、Tool、Middleware、SandboxProvider、StreamBridge、SSE、Next.js 工作台 |
-| 本项目新增 | `deerflow.anchored_branch`、细粒度 Anchor、Main/Child 隔离、Branch Context Builder、双栏 UI 与三策略实验；`deerflow.code_change` 作为 Demo |
-| 当前未完成 | 自动创建或合并真实 PR、生产级容器隔离、在线模型修复率评测、真实用户接受率、多机共享任务存储 |
+| 本项目新增 | `deerflow.code_change` Coding Agent 执行链、Hybrid Code Retrieval、Workspace/Test 控制面；`deerflow.anchored_branch` 的细粒度 Anchor、Main/Child 隔离、代码检索复用、双栏 UI 与三策略实验 |
+| 当前未完成 | 自动创建或合并真实 PR、生产级容器隔离、真实用户接受率、多机共享任务存储、大规模多次模型评测 |
 
 Project/Task、claim/lease 与报告仍是当前实现的一部分，但它们服务于 Coding Agent 的可控执行，不是另一个分布式系统项目的主叙事。
 
 ## 简历定位
 
-推荐定位为“基于 DeerFlow 二次开发的可审计 Coding Agent 工作流与上下文分支机制”，不要写成“自研 Agent 框架”“生产级分布式调度平台”或“全自动代码修复系统”。
+推荐定位为“CodeOps Agent，基于 DeerFlow 的代码智能协作平台”。简历只展开 Coding Agent 基本链路、代码仓上下文增强和 Anchored Branch 三项能力，不写成“自研 Agent 框架”“生产级分布式调度平台”或“全自动代码修复系统”。
 
 ## 本章代码阅读任务
 

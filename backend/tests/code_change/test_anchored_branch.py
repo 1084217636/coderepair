@@ -15,7 +15,7 @@ from deerflow.anchored_branch import (
     BranchContextStrategy,
     read_code_context,
 )
-from deerflow.anchored_branch.benchmark import default_cases, run_benchmark
+from deerflow.anchored_branch.benchmark import build_strategy_contexts, evaluation_cases, parse_choice
 from deerflow.anchored_branch.middleware import AnchoredBranchContextMiddleware
 
 
@@ -248,10 +248,14 @@ def test_branch_context_middleware_only_injects_request_scoped_branch_context() 
     assert [message.name for message in updates["messages"]] == ["anchored_branch_context"]
 
 
-def test_benchmark_compares_three_strategies_without_inventing_model_accuracy() -> None:
-    report = run_benchmark(default_cases(), token_budget=512)
+def test_real_model_evaluation_cases_compare_three_context_strategies() -> None:
+    cases = evaluation_cases()
+    contexts = build_strategy_contexts(cases[0], token_budget=512)
 
-    strategies = report["results"][0]["strategies"]
-    assert set(strategies) == {"FULL_HISTORY", "ANCHOR_ONLY", "ANCHORED_CONTEXT"}
-    assert all(item["answer_correct"] is None for item in strategies.values())
-    assert strategies["FULL_HISTORY"]["irrelevant_context_ratio"] > strategies["ANCHORED_CONTEXT"]["irrelevant_context_ratio"]
+    assert len(cases) == 12
+    assert set(contexts) == set(BranchContextStrategy)
+    fact = cases[0].required_facts[0]
+    assert fact in contexts[BranchContextStrategy.FULL_HISTORY].to_prompt()
+    assert fact not in contexts[BranchContextStrategy.ANCHOR_ONLY].to_prompt()
+    assert fact in contexts[BranchContextStrategy.ANCHORED_CONTEXT].to_prompt()
+    assert parse_choice("答案：C") == "C"

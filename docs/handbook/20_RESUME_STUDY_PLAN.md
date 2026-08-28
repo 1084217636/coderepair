@@ -2,19 +2,19 @@
 
 ## 推荐项目定位
 
-> 基于 DeerFlow 2.0 二次开发细粒度 Anchored Branch：从长回答选区记录 message ID、offset 和 Anchor 原文，创建独立 Child Thread；按 Token Budget 组合主任务摘要、相关主线上下文与 Branch History，并比较 Full History、Anchor Only 和 Anchored Context。Code Change 作为 Tool/Sandbox Demo。
+> CodeOps Agent 是基于 DeerFlow 2.0 二次开发的代码智能协作平台。主体是 Coding Agent 执行链和代码仓上下文增强，Anchored Branch 是解决长回答局部追问与 Main Context 膨胀的自研功能。
 
 简历中的专业短版：
 
 ```text
-基于 DeerFlow 二次开发 Client-Server 分支式 AI 对话系统。Next.js 客户端提供 Main Thread + Branch Panel 双栏，FastAPI 校验局部 Anchor 并创建独立 Child Thread；Branch Run 复用 DeerFlow Agent、Tool、Sandbox 和 SSE，但只写 Child Checkpoint。通过三种上下文策略实验评估背景遗漏、噪声和 Token 成本。
+基于 DeerFlow 二次开发 Client-Server Coding Agent。系统先从登记仓库构建受预算的相关代码上下文，再由受限 Agent 生成候选 Patch，并在独立 Workspace 中校验和测试；同时提供 Anchored Branch，让局部代码追问在 Child Thread 中运行而不污染 Main Thread。
 ```
 
 简历正文建议使用三条：
 
-- 将模型能力限制在 search、read、typed patch submit Tool 内，分离概率性生成与确定性执行，避免 Agent 直接修改登记仓库或把自然语言回答当成已验证结果。
-- 设计 Task 状态机和 Workspace 执行链路，在固定源 commit 上完成路径检查、Patch 校验/应用、服务端测试模板、超时进程清理、报告和审计记录。
-- 实现 Anchored Branch Context，将主任务摘要、回答 Anchor、相关主线片段、Branch History 与当前问题按预算注入 Child Thread；关闭 Branch 保证 Main Thread 不变。
+- 打通 Requirement → Retrieval → Agent/Tool → Patch → Workspace → Test → Diff/Report 链路。12 个真实模型任务最终通过 10 个，通过率 83.33%。
+- 实现 lexical + symbol + optional semantic 的轻量 Hybrid Code Retrieval 和 Token Budget Context Builder。12 个任务目标文件 Recall@5 为 100%，本次评测使用 lexical + symbol fallback。
+- 实现 Anchored Branch Context。12 个同模型案例中，Anchored Context 正确率为 100%，平均 Prompt Token 比 Full History 少 10.32%；关闭 Branch 后 Main Thread 不变。
 
 不能写：自研 DeerFlow/LangGraph、生产级分布式 Worker、自动创建合并 PR、在线模型高修复率、真实人工接受率或强容器 Sandbox。
 
@@ -24,7 +24,7 @@
 2. 第二周（05～09）：追通 DeerFlow 请求，画 Agent Loop，读 State/Middleware/Memory/Skill/Sub-Agent。
 3. 第三周（10～12）：读检索、Patch Agent、Workspace/Patch/Test，自己补一个负向测试。
 4. 第四周（13～16）：操作 Branch、Context Isolation、三策略实验与安全边界，完成一次 threat model。
-5. 第五周（17～19）：设计 Agent eval schema，练两次故障排查，闭卷画三条调用链。
+5. 第五周（17～19）：运行两组真实评测，分析两个失败任务，练两次故障排查，闭卷画三条调用链。
 6. 第六周（20）：准备 1/3/10 分钟项目介绍，按岗位做两轮模拟面试和错题复盘。
 
 每天至少输出一种证据：源码笔记、调用链图、测试、Benchmark 结果、故障 runbook 或口述录音。只阅读不输出很难应付追问。

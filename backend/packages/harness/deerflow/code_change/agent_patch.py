@@ -9,17 +9,18 @@ the only component allowed to validate, apply and test the submitted patch.
 from __future__ import annotations
 
 import json
+import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from langchain_core.messages import HumanMessage
-from langchain_core.tools import BaseTool, tool
+from langchain_core.tools import BaseTool, ToolException, tool
 
 from deerflow.agents.factory import create_deerflow_agent
 from deerflow.code_change.context_retriever import build_retrieval_context, retrieve_context
 from deerflow.code_change.models import RetrievedContext
-from deerflow.code_change.patcher import extract_changed_files, validate_patch_paths
+from deerflow.code_change.patcher import extract_changed_files, run_git_apply, validate_patch_paths
 from deerflow.code_change.repo_scanner import scan_repo
 
 if TYPE_CHECKING:
@@ -139,6 +140,16 @@ def build_code_change_tools(
         validate_patch_paths(changed_files)
         if any(Path(path).parts and Path(path).parts[0] == ".git" for path in changed_files):
             raise ValueError("patch may not change Git metadata")
+        with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", suffix=".diff", dir=root, delete=False) as handle:
+            handle.write(patch_text)
+            candidate_path = Path(handle.name)
+        try:
+            check = run_git_apply(root, candidate_path, check=True)
+        finally:
+            candidate_path.unlink(missing_ok=True)
+        if check.returncode != 0:
+            detail = check.stdout.strip()[:2_000] or "git apply --check failed"
+            raise ToolException(f"candidate diff is not applicable; correct the unified diff and submit again: {detail}")
         sink.patch_text = patch_text
         sink.rationale = rationale.strip()[:2000]
         sink.changed_files = changed_files
@@ -188,30 +199,31 @@ def generate_patch_with_agent(
     if contexts is None:
         contexts = retrieve_context(repo_path, requirement, scan_repo(repo_path), limit=8)
     context_bundle = build_retrieval_context(contexts, token_budget=context_token_budget)
-    graph, sink = create_code_change_agent(model, repo_path, requirement)
-    result = graph.invoke(
-        {
-            "messages": [
-                HumanMessage(
-                    content=(
-                        f"Requirement:\n{requirement}\n\n"
-                        "The retrieval stage selected the following bounded repository context. "
-                        "Use code_change_search and code_change_read_file when exact surrounding code is still needed.\n\n"
-                        f"{context_bundle.prompt}\n\n"
-                        "Inspect the registered repository and submit one candidate unified diff."
-                    )
-                )
-            ]
-        },
-        config={
-            "configurable": {"thread_id": thread_id},
-            "metadata": {
-                "code_change_task_id": task_id,
-                "code_change_thread_id": thread_id,
-                "code_change_run_id": run_id,
-            },
-        },
+    base_prompt = (
+        f"Requirement:\n{requirement}\n\n"
+        "The retrieval stage selected the following bounded repository context. "
+        "Use code_change_search and code_change_read_file when exact surrounding code is still needed.\n\n"
+        f"{context_bundle.prompt}\n\n"
+        "Inspect the registered repository and submit one candidate unified diff."
     )
+    config = {
+        "configurable": {"thread_id": thread_id},
+        "metadata": {
+            "code_change_task_id": task_id,
+            "code_change_thread_id": thread_id,
+            "code_change_run_id": run_id,
+        },
+    }
+    graph, sink = create_code_change_agent(model, repo_path, requirement)
+    try:
+        result = graph.invoke({"messages": [HumanMessage(content=base_prompt)]}, config=config)
+    except ToolException as exc:
+        # DeerFlow's default ToolNode deliberately propagates tool exceptions.
+        # Convert one deterministic patch-validation failure into explicit model
+        # feedback, then create a fresh graph and allow exactly one correction.
+        repair_prompt = f"{base_prompt}\n\nYour previous candidate was rejected by deterministic `git apply --check`. Correct the unified diff and submit it once more. Do not repeat the invalid patch.\n\nValidation error:\n{exc}"
+        graph, sink = create_code_change_agent(model, repo_path, requirement)
+        result = graph.invoke({"messages": [HumanMessage(content=repair_prompt)]}, config=config)
     if not sink.patch_text:
         raise ValueError("Agent finished without calling code_change_submit_patch")
     messages = result.get("messages", []) if isinstance(result, dict) else []

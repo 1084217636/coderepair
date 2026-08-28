@@ -61,7 +61,7 @@ Anchored Context 加入主任务摘要和筛选后的相关内容。它不是理
 
 ## 上游能力与个人实现边界
 
-上游 DeerFlow 提供 Thread、Run、Checkpoint、Agent、Tool、SandboxProvider、StreamBridge 和 SSE。我实现的是 Anchor 领域模型、Main/Child 关系、锚点校验、Context Builder、隔离 API、双栏 UI、多 Branch 标记和三策略 Benchmark。Code Change 只用于展示 Branch 内也能调用现有搜索和代码工具，不是 Anchored Branch 的创新点。
+上游 DeerFlow 提供 Thread、Run、Checkpoint、Agent、Tool、SandboxProvider、StreamBridge 和 SSE。我实现的是 Anchor 领域模型、Main/Child 关系、锚点校验、Context Builder、隔离 API、双栏 UI、多 Branch 标记和三策略 Benchmark。Code Change 是项目主体链路之一；Branch 在代码问题中复用它的 Hybrid Retrieval，但这不属于 Anchored Branch 的创新点。
 
 ## 当前局限
 
@@ -154,20 +154,20 @@ Branch Store 与 Thread Store 仍是两类持久化，创建过程不是跨库�
 
 ### 30 秒回答
 
-默认组合主任务摘要、Anchor、相关主线上下文、Branch History 和当前问题，并受 Token Budget 控制。实验用相同模型和任务比较 Full History、Anchor Only、Anchored Context 的正确率、背景遗漏、无关比例、Token 和长分支后的主任务恢复能力。
+默认组合主任务摘要、Anchor、相关主线上下文或检索代码、Branch History 和当前问题，并受 Token Budget 控制。实验用相同模型、温度和 12 个案例比较 Full History、Anchor Only、Anchored Context 的正确率、背景遗漏和 Prompt Token。
 
 ### 详细回答
 
-Full History 背景多但噪声和成本高；Anchor Only 隔离强但容易缺前置约束；Anchored Context 是可验证的折中。Anchor 和当前问题硬保留，可选内容超预算时删除并标记 truncated。Branch History 三组都保留，否则无法公平测试多轮 Branch。没有真实模型输出时只报告 Context 指标，回答正确率保持 null。
+Full History 背景多但噪声和成本高；Anchor Only 隔离强但容易缺前置约束；Anchored Context 是可验证的折中。Anchor 和当前问题硬保留，可选内容超预算时删除并标记 truncated。当前真实模型结果分别是 100% / 261.67 tokens、83.33% / 211.42 tokens、100% / 234.67 tokens。它是 12 个案例的单次结果，不代表 Anchored Context 对所有问题都最好。
 
 ### 结合当前 CodeRepair 源码
 
-`anchored_branch/context.py::BranchContextBuilder.build` 实现三策略和预算；`middleware.py` 注入隐藏 Context；`benchmark.py::run_benchmark` 输出同一 case 下的三组指标。
+`anchored_branch/context.py::BranchContextBuilder.build` 实现三策略和预算；`middleware.py` 注入隐藏 Context；`benchmark.py::run_anchored_evaluation` 对每个 case 真实调用三次模型并汇总指标。
 
 ### 技术选型与替代
 
-当前使用确定性有限快照，便于解释。只有评测证明窗口召回不足时才引入 Embedding/Rerank；只有字符估算误差影响预算时才接模型 tokenizer。
+当前 Branch 相关主线使用确定性窗口；关联代码仓后复用 lightweight Hybrid Retrieval。只有评测证明现有融合不足时才增加复杂 Reranker。
 
 ### 边界与追问
 
-默认 Benchmark 不是在线模型评测。回答正确率需要保存真实输出和人工或规则金标准；长分支后恢复能力也需要单独任务集，不能从 Prompt Token 推断。
+当前 Benchmark 会真实调用模型，并用固定选择题金标准判断答案。它没有测真实用户接受率和长分支后的主任务恢复能力，这两个结论不能从 Prompt Token 推断。

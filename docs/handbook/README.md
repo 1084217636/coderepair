@@ -18,7 +18,7 @@ Python async / HTTP / SSE
 ## 上游与个人实现
 
 - 上游 DeerFlow：Thread、Run、Checkpoint、Agent factory、通用 Tool/Middleware、Memory、Skill、Sub-Agent、SandboxProvider、StreamBridge/SSE 和工作台。
-- 个人新增：细粒度 Anchor、Main/Child 隔离、Branch Context Builder、双栏 UI 和三策略实验；Code Change 控制面与受限 Patch Agent 作为 Demo。
+- 个人新增：Coding Agent 执行链、Hybrid Code Retrieval、Workspace/Test 控制面，以及细粒度 Anchor、Main/Child 隔离、Branch Context Builder、双栏 UI 和三策略实验。
 - 未完成：生产级容器执行、在线模型修复率、真实人工接受率、真实 GitHub PR Provider 和多机共享任务控制面。
 
 ## 唯一阅读顺序

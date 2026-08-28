@@ -47,35 +47,33 @@ Agent 怎样从仓库里找到相关文件？用了向量数据库吗？
 
 ### 30 秒回答
 
-当前没有向量数据库。系统先扫描代码文件，再把 requirement 切成英文标识符和中文二、三字片段，对文件路径、摘要和内容分别计分，路径命中权重 3，摘要 2，内容 1，排序后返回前几个 snippet。这个方案本地可运行、结果可解释，但语义召回有限，适合作为 MVP。后续可以加入 BM25、Symbol 索引和 Embedding，做混合检索。
+当前没有向量数据库，使用轻量 Hybrid Code Retrieval。系统把源码切成代码块，组合路径/文本 lexical、函数和类型等 symbol，以及可选 Embedding semantic 三类分数。融合结果返回 Top-K、行号、符号和 reason，再由 Context Builder 按 Token Budget 注入 Agent。Embedding 不可用时自动回退到 lexical + symbol。
 
 ### 详细回答
 
-检索的输入是仓库路径、需求文本和扫描得到的 CodeFile 列表。当前扫描按路径排序，过滤依赖、构建产物和不支持的后缀，最多收集 500 个文件。
+输入是固定 Workspace、自然语言需求和扫描得到的 CodeFile 列表。扫描器先过滤依赖目录、构建产物、二进制和超限文件，检索器再按固定行数和 overlap 切成 CodeChunk。
 
-`tokenize` 使用正则提取英文标识符，并从连续中文中生成二元和三元片段。对每个文件，检索器计算三类命中：term 出现在 path 得 3 分，出现在 summary 得 2 分，出现在完整文本得 1 分。如果一个 Go 或 Python 文件完全没有命中，仍给 1 分作为弱兜底。最后按分数降序、路径升序排序。
+Lexical 信号比较 query 与 path、summary 和代码文本，适合精确函数名、报错和标识符。Symbol 信号使用 Python AST 以及 Go、TypeScript、JavaScript、Java 的轻量规则提取 function、class/type、method 和 interface。Semantic 信号通过可配置 OpenAI-compatible Embedding Provider 计算余弦相似度。
 
-返回的 `RetrievedContext` 包括 path、score、reason 和前 800 字符 snippet。reason 会明确写出 path、summary、content 各自得分，方便调试。
+融合层保存 lexical_score、symbol_score、semantic_score 和总分。返回结果包含 path、start/end line、symbols、snippet、estimated tokens 和 reason。`build_retrieval_context` 按总分加入代码块，达到 Token Budget 就停止。Agent 可以继续通过 search 和 bounded read 精读周边源码。
 
-这个算法的问题也很明显。它按 term 是否出现计分，不考虑出现次数和文档长度；英文同义词和跨语言语义无法匹配；读取每个文件全文会带来 O(文件总量) 的 I/O；snippet 固定取文件开头，命中位置可能在后面；超过 500 个受支持文件的仓库会按路径顺序截断。项目里必须如实说这些限制。
+这个方案仍不是大型代码搜索引擎。符号提取没有完整编译器语义，未建立调用图；本地内存索引不适合超大仓；Semantic 依赖外部 Provider，也没有 Cross Encoder 或复杂 Reranker。
 
 ### 结合当前 CodeRepair 源码
 
 - `repo_scanner.py::scan_repo` 生成 CodeFile 列表并过滤不需要的目录和文件。
-- `context_retriever.py::tokenize` 生成检索 term。
-- `retrieve_context` 计算三部分分数并返回 Top K。
+- `embeddings.py` 封装可选 Provider 和 fallback。
+- `context_retriever.py` 负责 chunk、符号提取、三路评分、融合与预算构造。
 - Patch Agent 的 `code_change_search` 默认 `limit=8`。
-- Worker 在执行生成前也会保存一次 `task.contexts`，用于报告和审计。
+- Worker 先保存 `task.contexts`，同一批 bounded context 进入 Agent 初始 Prompt。
 
 ### 技术选型与替代
 
-小仓库可以使用 `ripgrep` 或 BM25，速度快且可解释。代码检索还适合建立 symbol、import、调用关系索引。Embedding 能处理语义相似，但要考虑向量模型、切块、增量更新、权限过滤和费用。
-
-我倾向于混合检索：路径和 Symbol 使用词法检索保证精确命中，代码块 Embedding 提供语义召回，再用 reranker 排序。离线评测应使用标注过的相关文件集合，计算 Recall@K，而不是凭感觉说效果好。
+小仓先使用内存索引，能避免引入单独向量数据库和运维成本。只有仓库规模、查询延迟或增量更新需求证明它不够时，才考虑持久索引或向量库。Cross Encoder 和 GraphRAG 也要先用离线数据证明收益，不为技术名词增加复杂度。
 
 ### 边界与追问
 
-当前代码没有 Recall@5 数据，也没有向量库。不能在简历上写 RAG 检索准确率。如果面试官问 RAG，可以说当前是可解释词法检索，理解 RAG 演进方案，但没有把未实现方案写成现状。
+12 个真实 Agent 任务的标注目标文件 Recall@5 为 100%，但本次没有配置 Embedding，走的是 lexical + symbol fallback。这个数字只适用于当前小任务集，不能说成通用代码 RAG 准确率。最终测试通过率是 83.33%，也说明召回成功不等于生成和 Patch 一定成功。
 
 ## 问题 3：为什么 Agent 不能直接写文件和跑 shell
 

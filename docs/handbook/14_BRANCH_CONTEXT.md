@@ -6,7 +6,7 @@ Branch Context 按固定来源组合：
 Anchor（硬保留）
 + Root Summary（可截断）
 + 最近 Branch History（从尾部保留）
-+ Code Context（按预算加入）
++ Relevant Main Context / Retrieved Code（按预算加入）
 + Current Question（硬保留）
 ```
 
@@ -18,7 +18,9 @@ Anchor 是用户显式选中的讨论对象，Current Question 是当前意图�
 
 `to_prompt()` 使用 XML 风格边界，并声明应用提供内容是 context 而非 instructions。这能帮助模型区分来源，但不是完整 Prompt Injection 防线；代码与历史仍应视为不可信数据，Tool 层继续执行权限校验。
 
-`read_code_context` 只读仓库相对路径和最多 120 行。当前是 deterministic bounded read，不是完整 RAG；`estimated_tokens=len(chars)//4` 也不是 provider 精确计费。
+Branch 可以关联 owner 范围内已登记的 Code Change Project。每次代码追问使用当前问题复用 `retrieve_context` 和 `build_retrieval_context`，将有 reason 和行号的 Top-K 代码块放进 Branch Context；没有关联项目时只使用主线相关内容。Branch 不会复制完整 Repository。
+
+`estimated_tokens` 是 Context Builder 的预算近似值；真实评测优先读取模型返回的 `usage_metadata.input_tokens`。两者不能混成同一个精确账单概念。
 
 ## 本章代码阅读任务
 
@@ -30,7 +32,7 @@ Anchor 是用户显式选中的讨论对象，Current Question 是当前意图�
 
 每次只学习 Context 流水线的一步。
 
-- 阅读顺序：`backend/packages/harness/deerflow/anchored_branch/context.py` 的 `read_code_context` → `BranchContextBuilder.build` → `BranchContext.to_prompt` → `backend/app/gateway/routers/anchored_branch.py` 的 `stream_branch_run` → `backend/packages/harness/deerflow/anchored_branch/middleware.py`。
+- 阅读顺序：`anchored_branch/context.py` 的 `BranchContextBuilder.build` → `BranchContext.to_prompt` → `routers/anchored_branch.py::stream_branch_run` 中关联 Project 与调用 Hybrid Retrieval 的部分 → `anchored_branch/middleware.py`。
 - 看到什么程度：能手算固定预算下的保留顺序，并解释 prompt 进入模型前经过哪里。
 - 暂不要求：不实现模型 tokenizer、语义压缩或 reranker。
 - 验收动作：构造超长 history/code，验证 Anchor 与 Question 原样保留、旧 history 被裁剪且 `truncated=True`。

@@ -120,5 +120,10 @@ These apply repo-wide; module guides own the module-specific detail.
 - **Test-driven development** — features and bug fixes ship with tests. Backend tests live
   in `backend/tests/` (TDD is mandatory there; see [backend/AGENTS.md](backend/AGENTS.md));
   frontend tests live in `frontend/tests/`.
+- **CodeOps project scope** — the extension branch presents three personal contributions:
+  the Coding Agent execution chain, lightweight hybrid code retrieval, and Anchored Branch
+  context isolation. Keep real-model evaluation limited to the 12-task Agent suite and the
+  12-case three-strategy Context suite. Do not add Decision Ledger, GraphRAG, distributed
+  workers, extra providers, or automatic GitHub PR features to this scope.
 - **Format before pushing** — run `make format` (backend) / `pnpm check` (frontend). Backend
   CI enforces `ruff format --check`, so formatting must be clean before a push.

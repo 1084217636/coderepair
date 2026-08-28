@@ -33,7 +33,7 @@ Benchmark 比较 Full History、Anchor Only 和 Anchored Context，记录 Prompt
 
 ```bash
 cd backend
-PYTHONPATH=. uv run python -m deerflow.anchored_branch.benchmark --output ../artifacts/anchored-context-benchmark.json
+PYTHONPATH=. uv run python -m deerflow.anchored_branch.benchmark --output ../artifacts/anchored-context-evaluation
 ```
 
 默认运行只报告可确定计算的上下文指标。要比较回答正确率和长分支后主任务恢复能力，必须固定模型、温度、工具策略和任务集，保存三组真实输出后再评分。
@@ -50,4 +50,4 @@ PYTHONPATH=. uv run python -m deerflow.anchored_branch.benchmark --output ../art
 
 ## 三分钟项目介绍骨架
 
-我基于 DeerFlow 的 Thread、Checkpoint、Agent、Tool、Sandbox 和 Streaming 实现了细粒度 Anchored Branch。用户从长回答中选择一句、一段或代码片段，系统校验主消息与文本位置后创建独立 Child Thread；每次 Branch Run 按预算组合主任务摘要、Anchor、相关主线上下文和 Branch History。关闭 Branch 不写 Main Thread。我用 Full History、Anchor Only 和 Anchored Context 三组策略研究背景完整性、噪声与 Token 成本之间的取舍。Code Change 只是展示分支中搜索代码和调用工具的 Demo。
+我基于 DeerFlow 二次开发 CodeOps Agent。主体链路包含代码仓检索、受限 Agent 生成 Patch、Workspace 校验测试和 Diff/Report；Anchored Branch 是其中的自研上下文隔离功能。用户从长回答中选择一句、一段或代码片段，系统校验主消息与文本位置后创建独立 Child Thread；每次 Branch Run 按预算组合主任务摘要、Anchor、相关主线上下文或检索代码和 Branch History。关闭 Branch 不写 Main Thread。我用 Full History、Anchor Only 和 Anchored Context 三组策略比较回答正确率与 Prompt Token。

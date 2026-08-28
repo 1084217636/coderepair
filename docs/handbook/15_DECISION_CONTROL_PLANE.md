@@ -1,6 +1,6 @@
 # 15 Code Change Task 状态机与 Human-in-the-loop
 
-Anchored Branch 没有 Decision、Accept/Edit/Reject 或 Apply-to-Main。关闭 Branch 不写主线。本章只讲 Code Change Demo 中候选 Patch 的人工 approve/request changes，不要把代码审核状态机误认为对话分支的长期记忆治理。
+Anchored Branch 没有 Decision、Accept/Edit/Reject 或 Apply-to-Main。关闭 Branch 不写主线。本章只讲 Code Change 主链中候选 Patch 的人工 approve/request changes，不要把代码审核状态机误认为对话分支的长期记忆治理。
 
 ## Code Change Task
 
@@ -41,4 +41,4 @@ Task 持久记录 requirement、source commit、Patch、context、test、attempt
 
 1. Task 要长期保存基线、输入、过程、结果、失败、重试和审批；队列消息可能重复或过期。
 2. 不是。还需要合法状态、身份、审查材料、幂等、审计记录和明确的批准后副作用边界。
-3. Branch Close 只结束 Child Thread，Main 不变；Patch approve 是 Code Change Demo 的人工审核状态转换。它们属于不同产品问题。
+3. Branch Close 只结束 Child Thread，Main 不变；Patch approve 是 Coding Agent 代码交付链的人工作业状态。它们属于不同产品问题。

@@ -1,156 +1,100 @@
-# 项目二简历与面试包
+# 项目二简历与面试口径
 
-> 默认场景是多 API、多 Worker、共享存储/队列和独立沙箱；但当前仓库仍是文件型可演示 MVP。每个回答都要区分“已实现”和“生产化设计”。
+## 项目名称与定位
 
-## 1. 简历项目名
+项目名称：CodeOps Agent，基于 DeerFlow 的代码智能协作平台。
 
-```text
-基于 DeerFlow 二开的 AI 代码变更任务流平台
-```
+技术栈：Python、DeerFlow 2.0、LangGraph、LLM Agent、轻量 Hybrid Code Retrieval、Tool Calling、FastAPI、Local-copy Workspace、Git Diff、Next.js。
 
-技术栈：
+项目不是一个普通聊天框，也不是只研究对话分支。它面向真实代码仓任务，主体链路如下：
 
 ```text
-Python / FastAPI / Pydantic / DeerFlow / LangGraph / Tool Calling / Git / pytest / Next.js
+Requirement
+→ Repository Retrieval
+→ Agent / Tool Calling
+→ Candidate Patch
+→ Isolated Workspace
+→ Test
+→ Diff / Report
 ```
 
-项目描述：
+Anchored Branch 是个人二开中最有辨识度的功能。它解决长回答中局部追问污染主线程的问题，但不是项目的全部。
+
+## 简历可直接使用的版本
 
 ```text
-基于 DeerFlow 二次开发的 Client-Server Coding Agent 平台。Web 客户端通过 FastAPI 控制面提交代码变更任务，受限 Patch Agent 使用 search/read/typed-submit Tool 生成候选 unified diff，Worker 在固定 Git commit 的独立 Workspace 中完成校验、测试、报告和人工审核材料生成。
+CodeOps Agent｜基于 DeerFlow 的代码智能协作平台
+技术栈：Python、DeerFlow 2.0、LangGraph、LLM Agent、Code Retrieval、Tool Calling、FastAPI、Workspace、Git Diff
+
+• 基于 DeerFlow 2.0 二次开发 Coding Agent，打通 Requirement → Retrieval → Agent/Tool → Patch → Workspace → Test → Diff/Report 链路；Agent 只拥有 search、bounded read 和 typed patch submit 权限，确定性 Worker 负责 Patch 校验、应用和测试。12 个真实模型小型代码任务中，最终测试通过 10 个，通过率 83.33%。
+
+• 实现轻量 Hybrid Code Retrieval，将路径/代码词法命中、Python/Go/TypeScript/Java 符号命中和可配置 Embedding 语义分数组合，并返回可解释的召回原因；Context Builder 按 Token Budget 选择 Top-K 代码块。12 个任务的目标文件 Recall@5 为 100%，本次无 Embedding 配置的评测走 lexical + symbol fallback。
+
+• 设计 Anchored Branch 局部探索机制，从主回答或代码片段创建独立 Child Thread，按 Main Task Summary + Anchor + Relevant Context/Retrieved Code + Branch History 构造上下文，分支消息和工具调用不写入 Main Thread。12 个同模型案例中，Anchored Context 正确率为 100%，平均 Prompt Token 为 234.67；相较 Full History 保持相同正确率，Prompt Token 降低 10.32%。
 ```
 
-## 2. 简历 bullet
+这些数字来自 2026-08-28 的单次固定任务集运行。它们适合说明本次实验，不代表线上长期成功率。模型、Prompt、任务集或运行次数变化后必须重新测量。
 
-可以直接放简历：
+## 30 秒介绍
 
 ```text
-- 基于 DeerFlow Agent Harness 二次开发 Coding Agent 工作流，将模型的概率性代码生成限制在 search、read 和 typed patch submit Tool 内，并把 Patch 应用、测试和审核交给确定性 Worker 执行。
-- 设计 Task 状态机与独立 Workspace 执行链路，将任务固定到源 Git commit，依次完成路径检查、`git apply --check`、服务端测试模板、超时进程组清理、报告和审计记录，避免候选 Patch 直接污染登记仓库。
-- 实现细粒度 Anchored Branch，从主回答选区记录 message ID、offset 与 Anchor 原文，创建独立 Child Thread，并按预算组合主任务摘要、相关主线上下文与 Branch History；关闭 Branch 不写主线。
+这是我基于 DeerFlow 2.0 二次开发的 CodeOps Agent。用户提交自然语言代码需求后，系统先从登记仓库检索相关代码，再由受限 Agent 通过搜索、读文件和 typed submit Tool 生成候选 Patch。Worker 在固定 Git commit 的独立 Workspace 中校验 Patch、运行测试并输出 Diff 和报告。我还实现了 Anchored Branch，让用户从长回答或代码片段建立独立分支，局部追问不会写入主线程。DeerFlow 的 Agent Runtime、Thread、Run、Tool、Sandbox 和 SSE 是上游能力，我的工作集中在代码变更链路、Hybrid Retrieval 和 Anchored Branch。
 ```
 
-如果简历空间不够，可以压缩成 2 条：
+## 2 分钟介绍
 
 ```text
-- 基于 DeerFlow 二次开发 Client-Server Coding Agent 平台，以受限 search/read/typed-submit Tool 生成候选 Patch，并由 Worker 在固定 Git commit 的独立 Workspace 中完成校验、测试、报告与人工审核。
-- 设计 Anchored Branch Context，比较 Full History、Anchor Only 与 Anchored Context，在背景遗漏、无关上下文和 Prompt Token 之间评估取舍。
+我做的是一个基于 DeerFlow 的代码智能协作平台，主体仍然是 Coding Agent，而不是单独做一个分支聊天功能。
+
+一次任务从自然语言需求和已登记代码仓开始。仓库扫描器先过滤二进制、构建产物和超限文件，再把源码切成代码块。检索层组合三类信号：路径和代码文本的词法命中、函数/类型/方法等 Symbol 命中，以及可选的 Embedding 语义相似度。它对分数做融合，返回 Top-K 代码块和召回理由；Context Builder 再按 Token Budget 组织 Agent 的初始上下文，不复制整个仓库。
+
+Agent 复用 DeerFlow 的 create_deerflow_agent，但没有直接使用全权限通用 Agent。我只开放 search、bounded read 和 typed patch submit 三个 Tool。模型只能提出 unified diff，不能直接改登记仓库或执行任意 shell。服务端在固定 source commit 上准备独立 Workspace，执行路径检查、git apply --check、Patch 应用和白名单测试，最后生成 Diff、日志和报告。第一次 Diff 格式无效时，系统会把真实校验错误反馈给模型，只允许修正一次，避免无限重试。
+
+Anchored Branch 解决另一个问题：长回答里往往有多个局部问题，全部在线性主线程追问会让上下文越来越长。用户可以选中一句话、一段解释或代码片段创建 Child Thread。Branch Prompt 由主任务摘要、Anchor、相关主线内容或检索代码、Branch History 和当前问题组成。Branch 关闭后 Main Thread 不变，同一条回答也能创建多个 Branch。
+
+我用两套真实模型评测收口。Coding Agent 的 12 个小型代码任务通过 10 个；Anchored Context 的 12 个案例中，Full History 和 Anchored Context 都是 100% 正确，Anchored Context 的平均 Prompt Token 少 10.32%。这只是固定任务集的单次结果，所以我会同时说明样本量和当前限制。
 ```
 
-## 3. 1 分钟介绍
+## 面试追问
 
-```text
-这是一个基于 DeerFlow 二次开发的分支式 AI 对话与上下文工程项目。Web 客户端从长回答中选择局部文本，FastAPI 校验消息和 Anchor 后创建独立 Child Thread；Branch Run 复用 DeerFlow Agent、Tool、Sandbox 和 SSE，但只写 Child Checkpoint。Code Change 作为 Demo：Patch Agent 只能搜索、读取代码并通过 typed Tool 提交候选 diff，Worker 在固定源 commit 的独立 Workspace 中完成校验、测试和报告。项目不宣称首创 Branch，也不把 DeerFlow 底层能力当作个人创新。
-```
+### 为什么选 DeerFlow，而不是自己写 ReAct 循环？
 
-## 4. 3 分钟介绍
+最小 ReAct 循环不难，完整系统还需要 Thread、Run、Checkpoint、Tool 调度、流式事件和前端交互。DeerFlow 已经提供这些运行时能力。我选择在现有框架内找扩展点，能把时间放在代码仓上下文、Patch 安全边界和分支隔离上，也更接近接手公司开源底座做二次开发的工作。
 
-```text
-这个项目的起点是我不想做一个“聊天让 AI 改代码”的玩具，因为它很难和 Cursor、Copilot 区分。所以我选了 DeerFlow 作为开源 Agent 底座，只做一个明确的二开方向：项目级代码变更流程。
+### Code Retrieval 为什么叫 lightweight hybrid？
 
-第一阶段我先读 DeerFlow 的 gateway、harness、memory、sandbox、tools 目录，确定不侵入主 agent 链路，而是在 backend/packages/harness/deerflow/code_change 下新增独立包。这样风险小，也符合公司里接手大项目做增量需求的方式。
+它不是只有关键词，也没有引入向量数据库和复杂 Reranker。词法信号负责精确路径、标识符和代码文本；Symbol 信号补充函数、类、类型和方法；Embedding 配置存在时提供语义相似度。三类分数融合后仍保留 reason，方便解释某段代码为什么被召回。Embedding 不可用时，系统明确回退到 lexical + symbol，主链路仍能运行。
 
-第二阶段我把需求闭环做出来：project create 保存仓库和测试命令，task 创建后经过状态机，扫描仓库、召回上下文、应用 patch、跑测试、写报告。后面继续拆出 FastAPI router、队列 Worker、失败 retry、metrics、workspace 隔离、sandbox policy 和 PR handoff。
+### 为什么不把整个仓库交给模型？
 
-最后项目达到的效果是：AI 或人工给出的 patch 不直接污染主仓库，而是在任务 workspace 中验证；每一步都有状态、日志、报告和审计记录；测试通过后生成 PR 描述和创建 draft PR 的脚本，由人类审核后进入真实 GitHub 流程。
-```
+大仓通常超出上下文窗口，即使放得下也会增加 Token、延迟和无关噪声。项目采用 coarse-to-fine 方式：先检索候选代码块，再让 Agent 通过 bounded read 获取准确上下文。Context Builder 负责预算控制，Anchor 和当前问题等必要内容优先保留。
 
-## 5. 高频面试问答
+### Agent 为什么不能直接写文件？
 
-### Q1：这个项目和 Cursor / Copilot 有什么区别？
+模型生成具有概率性，文件修改和命令执行有副作用。当前 Agent 只负责候选 Patch，Worker 负责确定性校验和测试。这样可以明确区分"模型认为可行"和"程序实际验证通过"，也能留下失败阶段、测试日志和 Diff。
 
-```text
-Cursor / Copilot 偏个人 IDE 辅助，我做的是企业研发流程里的代码变更任务平台。重点不是让模型直接写代码，而是把需求、项目上下文、Patch、测试、审计、PR 审核串成闭环。
-```
+### 83.33% 是怎样测出来的？
 
-### Q2：为什么基于 DeerFlow 二开？
+评测包含 12 个自动验收的小型 Python 仓库任务，覆盖 bug fix、边界条件、参数检查、小功能和源代码加测试修改。每条任务都实际经过 Retrieval、Agent、Tool、Patch、Workspace 和 unittest。10 条最终测试通过，分母是 12。剩余两条在一次修正后仍生成 corrupt unified diff，因此计为失败。
 
-```text
-因为 DeerFlow 已经有 Agent harness、memory、sandbox、tools、gateway 等基础能力。我不想重复造底座，而是模拟公司里接手复杂开源项目做增量需求：先理解架构，再选择低侵入扩展点，最后用测试和文档收口。
-```
+### Recall@5 为 100% 能说明什么？
 
-### Q3：你具体二开了哪里？
+它只说明 12 个任务标注的目标文件都进入检索 Top 5，不能说明排序永远正确，也不能单独证明 Patch 正确。本次环境没有配置 Embedding，因此这个结果对应 lexical + symbol fallback。要比较 Semantic Retrieval 的收益，需要固定任务集，分别运行开关 Embedding 的消融实验。
 
-```text
-主要新增 backend/packages/harness/deerflow/code_change 包，并接入 backend/app/gateway/routers/code_change.py。新增了 project/task 模型、状态机、仓库扫描、上下文召回、patcher、workspace、sandbox policy、test runner、worker、retry、metrics 和 PR handoff。
-```
+### Anchored Branch 与普通新对话有什么区别？
 
-### Q4：怎么保证 AI 改的代码是对的？
+普通新对话没有精确指出来自主回答的哪一段。Anchored Branch 保存 source message ID、文本 offset、Anchor 原文和可选代码引用，并创建独立 Child Thread。它既保留局部定位，又让 Branch History、搜索和工具调用不进入 Main Thread。
 
-```text
-不能完全保证，所以平台不让变更直接进主分支。所有变更先经过 git apply --check，再在隔离 workspace 中应用 patch 和执行测试。测试结果、日志、diff、风险点和回滚建议都会保存，最后生成 draft PR 材料交给人审核。
-```
+### 三种 Context 策略的结果怎样解释？
 
-### Q5：为什么要有状态机？
+同一个模型、温度和 12 个案例下，Full History 为 100% / 261.67 tokens，Anchor Only 为 83.33% / 211.42 tokens，Anchored Context 为 100% / 234.67 tokens。Anchor Only 最省 Token，但会遗漏前置约束；Full History 信息完整但包含更多无关历史；Anchored Context 在这组案例中保留正确率，并比 Full History 少 10.32% Prompt Token。样本较小，不能宣称它对所有任务都最好。
 
-```text
-状态机让 Agent 执行过程从黑盒变成可观察流程。比如 `PLANNING、RETRIEVING_CONTEXT、PATCH_RECEIVED、VALIDATING_PATCH、APPLYING_PATCH、RUNNING_TESTS、HANDOFF_READY、FAILED`，每个阶段都能保存产物和错误，便于前端展示、失败重试和审计复盘。`PR_CREATED` 只有真实 GitHub 操作成功后才能写入。
-```
+## 上游能力、个人二开与边界
 
-### Q6：为什么 V4 引入 Worker？
+| 分类 | 内容 |
+| --- | --- |
+| DeerFlow 上游 | Agent Factory、Thread、Run、Checkpoint、Tool 抽象、Sandbox 接口、Middleware、SSE |
+| 个人二开 | Code Change 控制面、受限 Patch Agent、Hybrid Code Retrieval、Token Budget Context Builder、Workspace/Test 链路、Anchored Branch 领域模型与双栏交互、两组真实评测 |
+| 当前边界 | 文件型 Store/Queue、单机 POSIX claim/lease、local-copy Workspace、没有真实 GitHub PR、没有生产级容器隔离、Embedding 需要显式配置 |
 
-```text
-V3 的 API 同步执行 patch 和测试，测试慢时会阻塞 HTTP 请求。V4 把 API 和执行解耦：API 只创建 QUEUED 任务，Worker 消费队列后执行长耗时逻辑。这更接近公司里的研发效能平台。
-```
-
-### Q7：为什么用 workspace？
-
-```text
-因为不能让 AI patch 直接改用户主仓库。workspace 是每个任务独立复制出来的执行目录，patch 和 test 都在里面跑。即使失败，也不会污染原仓库，并且 workspace 可以作为审计证据保留。
-```
-
-### Q8：为什么 shell=False 很重要？
-
-```text
-shell=True 会让测试命令被 shell 解析，容易引入命令串联、重定向和注入风险。V7 改成 shlex.split + shell=False + executable 白名单，降低执行任意命令的风险。
-```
-
-### Q9：当前 RAG 做到什么程度？
-
-```text
-当前是轻量代码 RAG，先做 repo scan、文件摘要和关键词 Top-K 召回，目的是跑通闭环。后续可以升级到函数级 chunk、符号索引、调用关系、BM25、embedding 和最近修改历史。
-```
-
-### Q10：为什么不直接自动创建 GitHub PR？
-
-```text
-自动 push 和开 PR 是高风险动作。当前 V8 生成 pr_handoff.json 和 create_draft_pr.sh，由人工审核后执行。这体现的是企业流程里的权限边界：AI 准备材料，人类审核合并。
-```
-
-### Q11：项目目前最大的不足是什么？
-
-```text
-当前还不是完整生产系统。存储是 JSON 文件，队列是 JSONL，sandbox policy 还不是 Docker 级隔离，RAG 也还不是符号级索引。后续会迁 PostgreSQL、Redis Stream、Docker sandbox、Prometheus 和 GitHub App。
-```
-
-### Q12：你怎么做测试？
-
-```text
-我用了 compileall 做语法验证，pytest 覆盖 store、state machine、patcher、worker、sandbox policy 和 router，FastAPI TestClient 验证接口，CLI smoke 验证端到端流程，提交前跑 git diff --check。
-```
-
-## 6. 不要踩的坑
-
-不要这样说：
-
-```text
-我做了一个自动修代码的 AI。
-我保证 AI 改出来的代码一定正确。
-我复刻了 DeerFlow。
-```
-
-应该这样说：
-
-```text
-我做的是研发流程平台，AI 只是其中的 patch 生成或辅助环节。
-我不保证 AI 一次正确，所以引入测试、审计、retry 和人工 PR 审核。
-我基于 DeerFlow 做低侵入二开，重点是项目级代码变更闭环。
-```
-
-## 7. 简历项目边界
-
-面试官追问生产化时，可以坦诚说明：
-
-```text
-当前版本是秋招可演示 MVP，不是完整企业生产系统。它已经把闭环、状态机、测试、审计和 PR handoff 做出来。真正生产化还需要把文件存储换成数据库，把 JSONL 队列换成 Redis Stream 或 PostgreSQL 队列，把 local-copy sandbox 换成 Docker/DeerFlow sandbox，并接入权限和 GitHub App。
-```
+不能写"自研 DeerFlow"、"生产级分布式 Worker"、"自动创建并合并 PR"、"容器级安全 Sandbox"或"线上成功率 83.33%"。

@@ -56,8 +56,8 @@ AI 可以加快代码定位、测试草拟和文档整理，但不能替代对�
 | 维度 | 当前项目能证明 | 公司环境通常还需要 |
 | --- | --- | --- |
 | 上游维护 | 基于 DeerFlow 二次开发并区分上游/个人代码 | 长期 fork 策略、升级回归、依赖漏洞和跨团队 ownership |
-| 检索 | 轻量仓库扫描和受预算约束的上下文 | 增量索引、权限过滤、缓存、召回评测与大仓性能 |
-| 模型评测 | fake model 与固定 20 题可重复测试 | 多模型、多版本、真实任务集、人工标注、回归阈值与成本比较 |
+| 检索 | lexical + symbol + optional semantic 融合、召回 reason 和受预算上下文 | 增量索引、权限过滤、缓存、Embedding 消融与大仓性能 |
+| 模型评测 | 12-task Coding Agent 和 12-case 三策略 Context 单次评测 | 多模型、多版本、多次重复、人工标注、回归阈值与成本比较 |
 | 执行隔离 | 本地副本、受限命令和路径校验 | 容器/微虚机、网络与资源配额、镜像治理、恶意仓库防护 |
 | 控制面 | 文件化任务状态、人工审批与 PR handoff | 数据库、队列、多租户、幂等、并发恢复、GitHub App 权限与审计 |
 | 可观测性 | 结构化报告和基本错误记录 | trace、token/费用、SLO、告警、值班和事故复盘 |
@@ -69,7 +69,7 @@ AI 可以加快代码定位、测试草拟和文档整理，但不能替代对�
 
 ### 一分钟版本
 
-> 我基于 DeerFlow 实现了细粒度 Anchored Branch：从主回答局部 Anchor 创建独立 Child Thread，用受预算的主任务摘要、相关主线内容和 Branch History 构造上下文，关闭时不写 Main。Code Change 作为受限 Tool/Sandbox Demo，模型只能搜索、读取并提交 typed patch；服务端负责确定性校验、测试和报告。项目用后端测试、前端检查、三策略上下文实验和远端 CI 验证，同时不把本地 Workspace 描述成生产级 Sandbox，也不把上下文指标说成模型成功率。
+> 我基于 DeerFlow 二次开发 CodeOps Agent，打通仓库检索、受限 Agent 提交 Patch、独立 Workspace 校验测试和 Diff/Report 链路，并实现 Anchored Branch 隔离局部代码追问。12 个真实 Agent 任务通过 10 个；12 个同模型 Context 案例中，Anchored Context 保持 100% 正确率，并比 Full History 少 10.32% Prompt Token。这些都是固定小样本的单次结果，本地 Workspace 也不等于生产级 Sandbox。
 
 ### 被问“AI 写了多少”
 

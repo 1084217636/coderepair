@@ -80,5 +80,5 @@ UI selection
 ## 参考答案
 
 1. Thread/Run、Agent factory、Tool/Middleware、Checkpoint、StreamBridge/SSE、Sandbox 等 DeerFlow 基础设施。
-2. Code Change Demo、受限 Patch Agent、Anchored Branch/Context Isolation、API 与双栏控制台及其测试。
+2. Code Change 主链、Hybrid Retrieval、受限 Patch Agent、Anchored Branch/Context Isolation、API 与双栏控制台及其测试。
 3. 没有。create、run、close 都不写 Main；可选总结回主线尚未实现。

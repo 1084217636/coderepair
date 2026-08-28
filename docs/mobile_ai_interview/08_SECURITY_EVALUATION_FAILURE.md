@@ -83,11 +83,11 @@ Agent 还可以增加 Prompt Injection 检测和 Tool 参数策略，但它们�
 
 ### 技术选型与替代
 
-真正 Agent eval 需要另一套固定任务。每个任务应给出源 commit、自然语言需求、允许修改范围和验收测试，实际调用模型。指标至少包括 retrieval Recall@K、typed submit rate、Patch apply rate、test pass rate、task success、平均 Tool 次数、Token、耗时、越权拦截和人工接受率。还要固定模型版本、Prompt 和运行次数，报告波动范围。
+项目另外实现了 12-task 真实 Agent eval。每个任务创建临时 Git 仓库，提供自然语言需求和自动验收测试，实际调用 Requirement → Retrieval → Agent → Tool → Patch → Workspace → Test 链路。2026-08-28 单次运行最终通过 10 个，final test pass rate 为 83.33%，目标文件 Recall@5 为 100%。剩余两个任务在一次校验反馈后仍提交 corrupt unified diff。
 
 ### 边界与追问
 
-简历可以写"建立 20 case 确定性回归套件，覆盖成功、上下文冲突、路径穿越和测试失败"，不能写"Agent 修复率达到某个百分比"。
+简历可以分别写 20-case external Patch 确定性回归和 12-task 真实 Agent 评测，不能混用分母。83.33% 必须说明是 12 个小型任务的单次结果，不能称为线上修复率。
 
 ## 问题 3：有哪些重要故障窗口，系统怎样恢复
 

@@ -33,7 +33,22 @@ DeerFlow 的 Thread、Run、Checkpoint、Agent、Tool、Sandbox、Middleware 和
 - Project、Task、状态机、owner 隔离，以及 claim/lease/fencing 控制面。
 - Task timeline、测试报告、审计材料、人工 approve/request changes 和 PR handoff。
 - FastAPI 接口与 Next.js Code Change 控制台。
-- fake-model Agent 集成测试，以及 20 条外部 Patch 确定性评测。
+- fake-model Agent 集成测试和 20 条外部 Patch 确定性回归。
+- 两组真实模型评测：12 条 Coding Agent 自动验收任务，以及 12 条案例下三种 Branch Context 策略对比。
+
+## 真实模型评测结果
+
+2026-08-28 使用同一默认聊天模型完成单次固定任务集运行：
+
+| 评测 | 结果 |
+| --- | --- |
+| Coding Agent | 12 个任务最终通过 10 个，final test pass rate 83.33% |
+| Retrieval | 12 个任务目标文件 Recall@5 100%；本次未配置 Embedding，使用 lexical + symbol fallback |
+| Full History | 正确率 100%，平均 Prompt Token 261.67 |
+| Anchor Only | 正确率 83.33%，平均 Prompt Token 211.42 |
+| Anchored Context | 正确率 100%，平均 Prompt Token 234.67 |
+
+Anchored Context 在这组任务中与 Full History 正确率相同，平均 Prompt Token 少 10.32%。这些数字是小样本单次运行结果，不代表线上长期成功率。可复现命令和逐题结果见 [评测证据](docs/evaluation/README.md)。
 
 ## 必须主动说明的边界
 
@@ -43,7 +58,7 @@ DeerFlow 的 Thread、Run、Checkpoint、Agent、Tool、Sandbox、Middleware 和
 - `local-copy` 防止直接改脏源仓库，但宿主机测试进程不是强容器 Sandbox。
 - Semantic Retrieval 只有显式配置 `CODE_CHANGE_EMBEDDING_MODEL/API_KEY/BASE_URL` 时启用；不可用时自动退化为 lexical + symbol。本项目不引入向量数据库、Cross Encoder、GraphRAG 或复杂 Reranker。
 - PR handoff 只生成交接材料，没有调用 GitHub 创建真实 PR。
-- 20 条确定性评测不衡量在线模型成功率、token 成本或真实人工接受率。
+- 20 条 external Patch 确定性评测不衡量模型成功率。真实模型数据来自另外两组 12-case 评测；当前仍未测量真实用户接受率。
 - 当前 Branch Store 是 owner 目录下的本机 JSON 索引；消息仍由 DeerFlow Thread/Checkpoint 保存。
 
 ## 验证
@@ -54,6 +69,8 @@ PYTHONPATH=. uv run pytest tests/code_change -q
 uv run ruff check packages/harness/deerflow/code_change tests/code_change app/gateway/routers/code_change.py app/gateway/code_change_worker_auth.py app/gateway/auth_middleware.py app/gateway/csrf_middleware.py
 uv run ruff format --check packages/harness/deerflow/code_change tests/code_change app/gateway/routers/code_change.py app/gateway/code_change_worker_auth.py app/gateway/auth_middleware.py app/gateway/csrf_middleware.py
 PYTHONPATH=. uv run python -m deerflow.code_change.evaluation --output ../artifacts/code-change-evaluation
+PYTHONPATH=. uv run python -m deerflow.code_change.agent_evaluation --output ../artifacts/coding-agent-evaluation
+PYTHONPATH=. uv run python -m deerflow.anchored_branch.benchmark --output ../artifacts/anchored-context-evaluation
 
 cd ..
 python3 scripts/validate_code_change_handbook.py

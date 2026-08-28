@@ -1,10 +1,10 @@
 # CodeRepair 开发阶段记录
 
-> 文档对应提交：`594d2b63076430f4f1cb492e4c3c85c30b5423ea`
-> 生成或最后校验时间：2026-08-14
+> 这些文件记录早期开发过程，不对应当前提交。
+> 最后范围校正时间：2026-08-28
 > 适用分支：`agent-code-change-platform`
 
-本目录保留功能开发时的六阶段记录，不再作为学习顺序。唯一教材是 [`../handbook/README.md`](../handbook/README.md)。DeerFlow 的 Thread、Run、Agent、Tool、Sandbox、Checkpoint 和 SSE 属于上游能力；本项目的自定义范围是 Code Change 控制面与 Anchored Branch Context。
+本目录只保留早期开发记录，不再作为项目定位、简历数据或学习顺序。当前入口是 [`../../README.md`](../../README.md)，唯一顺序教材是 [`../handbook/README.md`](../handbook/README.md)，真实评测见 [`../evaluation/README.md`](../evaluation/README.md)。项目主体是 Coding Agent 执行链和 Hybrid Code Retrieval，Anchored Branch 是有辨识度的自研功能。
 
 ## 历史阶段记录
 

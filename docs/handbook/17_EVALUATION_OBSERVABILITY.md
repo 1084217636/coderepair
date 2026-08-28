@@ -18,24 +18,28 @@
 - 系统：首 token/总延迟、模型/Tool latency、input/output token、估算成本、错误分类。
 - 人工：接受/改回/拒绝，需要真实标注；没有数据时保持 `None`，不能猜。
 
-## 当前证据边界
+## 当前两组真实模型评测
 
-20 个 external-patch cases 只测确定性执行与安全拒绝，不是 LLM 修复率。Anchored Benchmark 只测字符/估算 token、硬保留和截断，不是回答质量。fake-model 测试证明 graph 协议接通，不证明真实模型泛化。
+第一组是 12 个 Coding Agent 小型代码任务。每个 case 创建临时 Git 仓库，实际经过 Requirement、Retrieval、Agent、Tool、Patch、Workspace 和 Test。2026-08-28 单次运行通过 10 个，最终测试通过率 83.33%；目标文件 Recall@5 为 100%。两个失败都发生在 Diff 格式阶段，不是检索漏召回。
+
+第二组是 12 个 Anchored Context 案例，每个案例用同一个模型和温度分别运行 Full History、Anchor Only 和 Anchored Context。结果是 100% / 261.67 tokens、83.33% / 211.42 tokens、100% / 234.67 tokens。模型真实生成回答，程序按固定选择题金标准判分。
+
+20 个 external-patch cases 仍只测确定性执行与安全拒绝，不能算模型修复率。fake-model 测试只证明 graph 和 Tool 协议接通。真实评测也是小样本单次运行，不能外推为生产效果。逐题数据和记录缺口见 `docs/evaluation/README.md`。
 
 ## 本章代码阅读任务
 
 ### 每次只核对一个指标来源
 
-两个评测、token middleware、CI 分开问：
+三个评测、token middleware、CI 分开问：
 
 > 我现在只学习【当前指标或文件】。请先说明这个数字要回答什么问题，再沿代码找到样本、固定变量、执行动作、原始记录、聚合公式和输出字段。用一条样本手算，并说明失败如何分类。然后列出这个指标能支持的结论和绝对不能外推的结论。若当前是 CI，请逐个解释门禁命令验证什么。最后给 3 道带答案的自测题。
 
 任何百分比都必须同时说出样本和分母。
 
-- 阅读顺序：`backend/packages/harness/deerflow/code_change/evaluation.py` → `backend/packages/harness/deerflow/anchored_branch/benchmark.py` → `backend/packages/harness/deerflow/agents/middlewares/token_usage_middleware.py` → `.github/workflows/code-change-platform.yml`。
+- 阅读顺序：先看 `code_change/evaluation.py` 理解 external Patch 回归，再看 `code_change/agent_evaluation.py` 的 12 个真实任务，接着看 `anchored_branch/benchmark.py` 的 12 × 3 模型调用，最后看 token middleware 和 CI。
 - 看到什么程度：任何指标都能回答样本是什么、变量是否固定、数据从哪来、没有测什么。
 - 暂不要求：不购买在线模型额度或搭建 LangSmith 服务。
-- 验收动作：设计 10 个小仓库任务的 Agent eval schema，至少记录 seed/模型、retrieval、trajectory、patch、test、token、latency 和 failure category。
+- 验收动作：亲自运行两组真实评测，从 JSON 中随机选一个成功和一个失败 case，复述原始记录如何进入汇总指标。
 
 ## 本章自测
 

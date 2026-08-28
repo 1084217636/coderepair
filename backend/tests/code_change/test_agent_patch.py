@@ -58,6 +58,54 @@ def test_tools_accept_one_typed_patch_submission(tmp_path: Path) -> None:
         submit.invoke({"patch_text": _patch(), "rationale": "again"})
 
 
+def test_agent_can_correct_patch_after_submit_tool_validation_feedback(tmp_path: Path) -> None:
+    malformed = """diff --git a/app.py b/app.py
+--- a/app.py
++++ b/app.py
+@@ malformed @@
+-bad
++good
+"""
+    model = FakeToolCallingModel(
+        responses=[
+            AIMessage(
+                content="",
+                tool_calls=[
+                    {
+                        "name": "code_change_submit_patch",
+                        "args": {"patch_text": malformed, "rationale": "first attempt"},
+                        "id": "submit-bad",
+                        "type": "tool_call",
+                    }
+                ],
+            ),
+            AIMessage(
+                content="",
+                tool_calls=[
+                    {
+                        "name": "code_change_submit_patch",
+                        "args": {"patch_text": _patch(), "rationale": "corrected diff"},
+                        "id": "submit-good",
+                        "type": "tool_call",
+                    }
+                ],
+            ),
+            AIMessage(content="Corrected candidate submitted."),
+        ]
+    )
+
+    result = generate_patch_with_agent(
+        model,
+        str(_repo(tmp_path)),
+        "change answer to two",
+        thread_id="thread-repair",
+        run_id="run-repair",
+    )
+
+    assert result.patch_text == _patch()
+    assert result.rationale == "corrected diff"
+
+
 def test_real_deerflow_agent_graph_submits_candidate_patch(tmp_path: Path) -> None:
     model = FakeToolCallingModel(
         responses=[

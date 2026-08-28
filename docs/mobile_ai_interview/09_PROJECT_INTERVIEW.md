@@ -8,7 +8,7 @@
 
 ### 30 秒回答
 
-这是我基于 DeerFlow 二次开发的 Anchored Branch Context 项目。我复用上游 Thread、Run、Tool、Checkpoint、SSE 和前端工作台，新增局部 Anchor、Main/Child 隔离、受预算 Context Builder、双栏 UI 和三策略实验。用户围绕长回答中的一句或代码片段创建 Child Thread，Branch 的多轮讨论和工具调用不写 Main。Code Change 是展示 Tool/Sandbox 能力的 Demo，不是核心创新。
+这是我基于 DeerFlow 二次开发的 CodeOps Agent。主体是代码仓检索、受限 Agent 生成 Patch、独立 Workspace 校验测试和 Diff/Report 输出。我还实现了 Anchored Branch，让用户从长回答或代码片段创建独立 Child Thread，局部追问和工具调用不写 Main。DeerFlow 的 Thread、Run、Agent、Tool、Checkpoint、Sandbox 和 SSE 是上游能力，我的二开集中在 Coding Agent 链路、Hybrid Code Retrieval 和 Anchored Branch。
 
 ### 详细回答
 
@@ -16,7 +16,7 @@
 
 用户先登记 Project，包括仓库和服务端 test profile，再创建 external 或 agent 模式的 Task。Task 固定当前 Git commit并进入队列。Worker 用 claim、lease、heartbeat 和 claim id 领取任务，在 Task Artifact 下导出 Workspace。
 
-Agent 模式会构建一个最小 DeerFlow graph，只暴露代码搜索、限量读文件和类型化 Patch 提交三个 Tool。模型提交 unified diff 后，流程与 external 模式汇合。系统检查变更路径，执行 `git apply --check`，在 Workspace 中应用 Patch，运行白名单测试命令，并保存 Patch、日志、报告和审核材料。测试通过只到 HANDOFF_READY，人工批准才到 APPROVED。
+Agent 模式会构建一个最小 DeerFlow graph，只暴露代码搜索、限量读文件和类型化 Patch 提交三个 Tool。初始 Prompt 不是完整仓库，而是 lexical、symbol 和可选 semantic 三路检索融合后按 Token Budget 选择的代码块。模型提交 unified diff 后，流程与 external 模式汇合。系统检查变更路径，执行 `git apply --check`，在 Workspace 中应用 Patch，运行白名单测试命令，并保存 Patch、日志、报告和审核材料。第一次 Diff 无效时只允许一次带校验错误的修正。测试通过只到 HANDOFF_READY，人工批准才到 APPROVED。
 
 用户选择主回答的一段文本后，系统保存 message ID、offset、Anchor 原文和可选代码引用，校验后创建 Child Thread。每次 Run 按预算组合主任务摘要、Anchor、相关主线内容和 Branch History。关闭 Branch 只结束 Child，Main 不变。
 
@@ -84,18 +84,18 @@ Code Change 也没有直接复用全权限 Lead Agent，而是使用上游提供
 
 ### 30 秒回答
 
-第一条写架构和贡献边界，第二条写受限 Agent 与确定性验证，第三条写状态可靠性和 Anchored Branch。每条都落到当前类、状态或测试证据，不写生产级、全自动 PR、在线修复率或容器沙箱。
+第一条写 Coding Agent 完整链路和真实任务结果，第二条写 Hybrid Code Retrieval，第三条写 Anchored Branch 与三策略实验。每个百分比都要同时说明分母、模型运行条件和不能外推的范围。
 
 ### 详细回答
 
 可以使用下面三条：
 
 ```text
-基于 DeerFlow 二次开发细粒度 Anchored Branch，复用 Thread、Run、Tool、Checkpoint 与 SSE Runtime，新增局部锚点、Main/Child 隔离、双栏交互和有预算的 Context Builder。
+基于 DeerFlow 二次开发受限 Coding Agent，打通 Requirement、Retrieval、Agent/Tool、Patch、Workspace、Test 和 Diff/Report 链路；12 个真实模型小型代码任务最终通过 10 个，通过率 83.33%。
 
-设计受限 Patch Agent，仅开放 search、read 和 typed submit Tool；将模型生成与执行解耦，在固定 Git commit 的独立 Workspace 中完成路径校验、git apply --check、服务端测试 profile、超时进程组清理和报告生成。
+实现 lexical、symbol 和可选 semantic 的轻量 Hybrid Code Retrieval，通过融合评分和 Token Budget 选择 Top-K 代码块；12 个任务目标文件 Recall@5 为 100%，本次评测走 lexical + symbol fallback。
 
-实现 Project/Task owner 隔离、状态机、原子 claim、lease、heartbeat 和 fencing；建立 20 case external Patch 确定性回归套件，覆盖成功、上下文冲突、路径穿越和测试失败。
+实现 Anchored Branch，将主回答局部 Anchor 映射为独立 Child Thread；12 个同模型案例中 Anchored Context 正确率为 100%，平均 Prompt Token 比 Full History 少 10.32%，关闭 Branch 后不修改 Main Thread。
 ```
 
 第一条的证据是两个新增 package、FastAPI Router 和前端交互。第二条的证据是 `agent_patch.py`、Workspace、Patcher 和 TestRunner。第三条的证据是 Store、StateMachine、Evaluation 和对应单元测试。
@@ -128,7 +128,7 @@ Code Change 也没有直接复用全权限 Lead Agent，而是使用上游提供
 - 自研 DeerFlow Agent 框架。
 - 生产级分布式任务调度。
 - 容器级安全沙箱。
-- Agent 自动修复成功率 50%。
+- 不说明样本和分母的 Agent 成功率。
 - 自动创建并合并 GitHub PR。
 
 ## 问题 4：如果面试官质疑项目是 AI 生成的代码，怎么回答
