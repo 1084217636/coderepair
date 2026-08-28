@@ -36,6 +36,7 @@ class AnchoredBranchStore:
         main_task_summary: str = "",
         relevant_main_context: list[str] | None = None,
         main_history: list[str] | None = None,
+        code_change_project_id: str = "",
         context_strategy: BranchContextStrategy = BranchContextStrategy.ANCHORED_CONTEXT,
         token_budget: int = 6_000,
     ) -> BranchRecord:
@@ -50,6 +51,7 @@ class AnchoredBranchStore:
             main_task_summary=main_task_summary,
             relevant_main_context=list(relevant_main_context or []),
             main_history=list(main_history or []),
+            code_change_project_id=code_change_project_id,
             context_strategy=context_strategy,
             token_budget=token_budget,
             created_at=timestamp,

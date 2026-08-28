@@ -138,6 +138,54 @@ async def test_branch_run_targets_child_checkpoint_and_child_run(monkeypatch: py
     assert run_body.context["branch_context"]["branch_id"] == record.branch_id
 
 
+@pytest.mark.asyncio
+async def test_branch_run_reuses_code_retrieval_for_linked_project(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / "auth.py").write_text("def validate_token(token):\n    return bool(token)\n", encoding="utf-8")
+    store = AnchoredBranchStore(tmp_path / "branches", owner_id="user-1")
+    record = store.create(
+        main_thread_id="main-1",
+        child_thread_id="child-1",
+        owner_id="user-1",
+        anchor=AnchorSelection(text="validate the token", message_id="answer-1"),
+        main_task_summary="Review authentication",
+        code_change_project_id="project-1",
+    )
+    request = SimpleNamespace()
+    start_run = AsyncMock(return_value=SimpleNamespace(run_id="run-1"))
+
+    async def empty_stream():
+        if False:
+            yield b""
+
+    monkeypatch.setattr(branch_router, "_get_branch", lambda request, branch_id: record)
+    monkeypatch.setattr(branch_router, "_require_thread", AsyncMock(return_value={"thread_id": "child-1"}))
+    monkeypatch.setattr(branch_router, "_checkpoint_values", AsyncMock(return_value={"messages": []}))
+    monkeypatch.setattr(
+        branch_router,
+        "_code_change_store",
+        lambda request: SimpleNamespace(get_project=lambda project_id: SimpleNamespace(repo_path=str(repo))),
+    )
+    monkeypatch.setattr(branch_router, "get_stream_bridge", lambda request: SimpleNamespace())
+    monkeypatch.setattr(branch_router, "get_run_manager", lambda request: SimpleNamespace())
+    monkeypatch.setattr(branch_router, "start_run", start_run)
+    monkeypatch.setattr(branch_router, "sse_consumer", lambda *args: empty_stream())
+
+    await branch_router.stream_branch_run(
+        record.branch_id,
+        branch_router.RunCreateRequest(input={"messages": [{"role": "human", "content": "How is validate_token used?"}]}),
+        request,
+    )
+
+    run_body = start_run.await_args.args[0]
+    payload = run_body.context["branch_context"]
+    assert "auth.py" in payload["prompt"]
+    assert "validate_token" in payload["prompt"]
+    assert payload["retrieval_tokens"] > 0
+    assert payload["retrieval_reasons"]
+
+
 def test_context_strategies_keep_branch_history_but_change_main_context() -> None:
     builder = BranchContextBuilder(token_budget=512)
     inputs = {

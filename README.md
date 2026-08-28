@@ -1,18 +1,16 @@
-# Anchored Branch Context Lab（基于 DeerFlow 二次开发）
+# CodeOps Agent（基于 DeerFlow 的代码智能协作平台）
 
-本项目研究复杂长回答中的局部追问：用户选中助手回答的一句话、一段文字或代码片段，系统在原位置建立 Anchor，并用独立 Child Thread 继续多轮讨论。Branch 默认不写入 Main Thread，关闭后可以回到原回答继续阅读。Code Change 保留为演示场景，不是项目核心创新。
+本项目基于 DeerFlow 2.0 二次开发面向真实代码仓任务的 Coding Agent，主链路是 `Requirement → Repository Retrieval → Agent/Tool → Patch → Workspace → Test → Diff/Report`。Anchored Branch 是其中最有辨识度的自研功能：用户可从长回答或代码片段建立独立 Child Thread，局部多轮追问不写入 Main Thread。
 
-## Anchored Branch 学习主线
+## 秋招只讲三项能力
 
 ```text
-Thread → Run → Agent → Tool → Sandbox → SSE
-→ Anchored Branch
-→ Main Task Summary + Anchor + Relevant Main Context + Branch History
-→ Token Budget
-→ independent Child Thread
+1. Coding Agent：Requirement → Retrieval → Agent → Tool → Patch → Test
+2. Code Context：lexical + symbol + optional semantic → fusion → Top-K → Token Budget
+3. Anchored Branch：Main Answer → Anchor → Child Thread → isolated multi-turn
 ```
 
-DeerFlow 的 Thread、Run、Checkpoint、Agent、Tool、Sandbox 和 SSE 是上游能力；本项目新增细粒度 Anchor 数据、Main/Child Thread 关系、`BranchContextBuilder`、上下文策略实验和双栏交互。它不宣称首创对话 Branch，也不实现 Decision Capsule、Context Ledger、Stale、Conflict 或 Supersede 等长期记忆治理。
+DeerFlow 的 Thread、Run、Checkpoint、Agent、Tool、Sandbox、Middleware 和 SSE 是上游能力，不属于个人创新。个人二开集中在受限 Patch Agent 的任务链、可解释的轻量 Hybrid Code Retrieval、确定性 Workspace/Test 验证，以及 Anchored Branch 的局部锚点、Main/Child 隔离和上下文构造。
 
 一次任务从已登记仓库和需求开始。系统支持两种候选 Patch 来源：
 
@@ -27,8 +25,10 @@ DeerFlow 的 Thread、Run、Checkpoint、Agent、Tool、Sandbox 和 SSE 是上�
 
 ## 个人二开的当前实现
 
-- 外部 Patch 与最小权限 DeerFlow Patch Agent 两条入口。
-- Anchored Branch、Main/Child 上下文隔离、受预算的 Anchored Context 和三策略实验。
+- 最小权限 Patch Agent：只开放 code search、bounded read 和 typed patch submit。
+- Hybrid Code Retrieval：路径/关键词/代码文本、Python/Go/TS/Java 轻量 Symbol、可配置 OpenAI-compatible Embedding、加权融合与召回原因。
+- Retrieval Context Builder：按 Token Budget 将 Top-K code chunks 注入 Agent，不复制完整 Repository。
+- Anchored Branch：可关联已登记代码仓，每轮代码追问复用同一 Hybrid Retrieval；Branch History 只写 Child Thread。
 - 固定 Git commit 的 local-copy Workspace、Patch 路径校验和服务端测试 profile。
 - Project、Task、状态机、owner 隔离，以及 claim/lease/fencing 控制面。
 - Task timeline、测试报告、审计材料、人工 approve/request changes 和 PR handoff。
@@ -41,7 +41,7 @@ DeerFlow 的 Thread、Run、Checkpoint、Agent、Tool、Sandbox 和 SSE 是上�
 - 当前没有常驻 Worker 服务；控制台只入队和查询，内部调用方需使用专用 token 调用同步的 `worker/run-once` 端点。
 - `agent_thread_id` 和 `agent_run_id` 只是 Task 级关联标识，不是 Gateway 持久化 Thread/Run 记录，Agent graph 也没有配置 checkpointer。
 - `local-copy` 防止直接改脏源仓库，但宿主机测试进程不是强容器 Sandbox。
-- 轻量检索没有向量数据库、Embedding 或 Rerank。
+- Semantic Retrieval 只有显式配置 `CODE_CHANGE_EMBEDDING_MODEL/API_KEY/BASE_URL` 时启用；不可用时自动退化为 lexical + symbol。本项目不引入向量数据库、Cross Encoder、GraphRAG 或复杂 Reranker。
 - PR handoff 只生成交接材料，没有调用 GitHub 创建真实 PR。
 - 20 条确定性评测不衡量在线模型成功率、token 成本或真实人工接受率。
 - 当前 Branch Store 是 owner 目录下的本机 JSON 索引；消息仍由 DeerFlow Thread/Checkpoint 保存。

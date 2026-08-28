@@ -17,6 +17,7 @@ export interface BranchRecord {
   main_task_summary: string;
   relevant_main_context: string[];
   main_history: string[];
+  code_change_project_id: string;
   context_strategy: "FULL_HISTORY" | "ANCHOR_ONLY" | "ANCHORED_CONTEXT";
   token_budget: number;
   status: "ACTIVE" | "CLOSED";

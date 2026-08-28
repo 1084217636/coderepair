@@ -107,6 +107,9 @@ def execute_task(
                 task.agent_final_message = generated.final_message
                 task.agent_thread_id = generated.thread_id
                 task.agent_run_id = generated.run_id
+                task.retrieval_context_tokens = generated.retrieval_context_tokens
+                task.agent_input_tokens = generated.input_tokens
+                task.agent_output_tokens = generated.output_tokens
                 transition(task, TaskStatus.VALIDATING_PATCH, f"Agent submitted a typed candidate patch at {requested_patch}.")
             except Exception as exc:
                 task.error_code = "AGENT_GENERATION_FAILED"
@@ -287,6 +290,7 @@ def _generate_agent_patch(task: Task, workspace_path: str) -> AgentPatchResult:
         thread_id=task.agent_thread_id,
         run_id=task.agent_run_id,
         task_id=task.task_id,
+        retrieved_contexts=task.contexts,
     )
 
 

@@ -24,6 +24,8 @@ from deerflow.anchored_branch import (
     BranchContextBuilder,
     BranchContextStrategy,
 )
+from deerflow.code_change.context_retriever import build_retrieval_context, retrieve_context
+from deerflow.code_change.repo_scanner import scan_repo
 from deerflow.runtime.user_context import get_effective_user_id
 from deerflow.utils.messages import message_to_text
 from deerflow.utils.time import now_iso
@@ -46,6 +48,7 @@ class BranchCreateRequest(BaseModel):
     anchor: AnchorRequest
     context_strategy: BranchContextStrategy = BranchContextStrategy.ANCHORED_CONTEXT
     token_budget: int = Field(default=6_000, ge=512, le=32_000)
+    code_change_project_id: str = Field(default="", max_length=256)
 
 
 def _owner_id(request: Request) -> str:
@@ -56,6 +59,12 @@ def _owner_id(request: Request) -> str:
 
 def _store(request: Request) -> AnchoredBranchStore:
     return AnchoredBranchStore(owner_id=_owner_id(request))
+
+
+def _code_change_store(request: Request):
+    from app.gateway.routers.code_change import get_code_change_store
+
+    return get_code_change_store(request)
 
 
 async def _require_thread(request: Request, thread_id: str) -> dict[str, Any]:
@@ -202,6 +211,11 @@ async def create_branch(body: BranchCreateRequest, request: Request) -> dict[str
     parent_values = await _checkpoint_values(request, body.main_thread_id)
     anchor = _validated_anchor(parent_values, body.anchor)
     summary, relevant, main_history = _main_context_snapshot(parent_values, anchor.message_id)
+    if body.code_change_project_id:
+        try:
+            _code_change_store(request).get_project(body.code_change_project_id)
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail="Code Change project not found") from exc
     child_id = await _create_child_thread(
         request,
         {"branch_type": "anchored", "parent_thread_id": body.main_thread_id, "branch_status": "ACTIVE"},
@@ -214,6 +228,7 @@ async def create_branch(body: BranchCreateRequest, request: Request) -> dict[str
         main_task_summary=summary,
         relevant_main_context=relevant,
         main_history=main_history,
+        code_change_project_id=body.code_change_project_id,
         context_strategy=body.context_strategy,
         token_budget=body.token_budget,
     )
@@ -248,6 +263,24 @@ async def stream_branch_run(branch_id: str, body: RunCreateRequest, request: Req
     history = _message_history(values)
     if record.status != "ACTIVE":
         raise HTTPException(status_code=409, detail="closed Branches cannot start new runs")
+    question = _last_question(body)
+    code_context = [record.anchor.code_context] if record.anchor.code_context else []
+    retrieval_tokens = 0
+    retrieval_reasons: list[str] = []
+    if record.code_change_project_id:
+        try:
+            project = _code_change_store(request).get_project(record.code_change_project_id)
+        except KeyError as exc:
+            raise HTTPException(status_code=409, detail="linked Code Change project no longer exists") from exc
+        retrieved = retrieve_context(project.repo_path, question, scan_repo(project.repo_path), limit=8)
+        retrieval_bundle = build_retrieval_context(
+            retrieved,
+            token_budget=min(2_000, max(512, record.token_budget // 3)),
+        )
+        code_context.append(retrieval_bundle.prompt)
+        retrieval_tokens = retrieval_bundle.estimated_tokens
+        retrieval_reasons = [item.reason for item in retrieval_bundle.items]
+
     builder = BranchContextBuilder(token_budget=record.token_budget)
     context = builder.build(
         record.anchor,
@@ -255,8 +288,8 @@ async def stream_branch_run(branch_id: str, body: RunCreateRequest, request: Req
         relevant_main_context=record.relevant_main_context,
         main_history=record.main_history,
         branch_history=history,
-        code_context=[record.anchor.code_context] if record.anchor.code_context else [],
-        current_question=_last_question(body),
+        code_context=code_context,
+        current_question=question,
         strategy=record.context_strategy,
     )
     body = body.model_copy(
@@ -268,6 +301,8 @@ async def stream_branch_run(branch_id: str, body: RunCreateRequest, request: Req
                     "branch_id": branch_id,
                     "prompt": context.to_prompt(),
                     "estimated_tokens": context.estimated_tokens,
+                    "retrieval_tokens": retrieval_tokens,
+                    "retrieval_reasons": retrieval_reasons,
                     "truncated": context.truncated,
                 },
             },

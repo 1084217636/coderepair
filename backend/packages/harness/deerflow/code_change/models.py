@@ -80,9 +80,16 @@ class CodeFile:
 @dataclass(slots=True)
 class RetrievedContext:
     path: str
-    score: int
+    score: float
     reason: str
     snippet: str
+    start_line: int = 1
+    end_line: int = 1
+    symbols: list[str] = field(default_factory=list)
+    lexical_score: float = 0.0
+    symbol_score: float = 0.0
+    semantic_score: float = 0.0
+    estimated_tokens: int = 0
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -149,6 +156,9 @@ class Task:
     agent_rationale: str = ""
     agent_changed_files: list[str] = field(default_factory=list)
     agent_final_message: str = ""
+    retrieval_context_tokens: int = 0
+    agent_input_tokens: int = 0
+    agent_output_tokens: int = 0
     workspace_path: str = ""
     workspace_manifest_path: str = ""
     sandbox_kind: str = ""

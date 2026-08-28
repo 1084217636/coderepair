@@ -17,7 +17,8 @@ from langchain_core.messages import HumanMessage
 from langchain_core.tools import BaseTool, tool
 
 from deerflow.agents.factory import create_deerflow_agent
-from deerflow.code_change.context_retriever import retrieve_context
+from deerflow.code_change.context_retriever import build_retrieval_context, retrieve_context
+from deerflow.code_change.models import RetrievedContext
 from deerflow.code_change.patcher import extract_changed_files, validate_patch_paths
 from deerflow.code_change.repo_scanner import scan_repo
 
@@ -49,6 +50,9 @@ class AgentPatchResult:
     final_message: str
     thread_id: str
     run_id: str
+    retrieval_context_tokens: int = 0
+    input_tokens: int = 0
+    output_tokens: int = 0
 
 
 @dataclass(slots=True)
@@ -170,6 +174,8 @@ def generate_patch_with_agent(
     thread_id: str,
     run_id: str,
     task_id: str = "",
+    retrieved_contexts: list[RetrievedContext] | None = None,
+    context_token_budget: int = 4_000,
 ) -> AgentPatchResult:
     """Run the Agent and return the tool-submitted candidate patch.
 
@@ -178,9 +184,25 @@ def generate_patch_with_agent(
     typed submission and validation boundary.
     """
 
+    contexts = retrieved_contexts
+    if contexts is None:
+        contexts = retrieve_context(repo_path, requirement, scan_repo(repo_path), limit=8)
+    context_bundle = build_retrieval_context(contexts, token_budget=context_token_budget)
     graph, sink = create_code_change_agent(model, repo_path, requirement)
     result = graph.invoke(
-        {"messages": [HumanMessage(content=(f"Requirement:\n{requirement}\n\nInspect the registered repository and submit one candidate unified diff."))]},
+        {
+            "messages": [
+                HumanMessage(
+                    content=(
+                        f"Requirement:\n{requirement}\n\n"
+                        "The retrieval stage selected the following bounded repository context. "
+                        "Use code_change_search and code_change_read_file when exact surrounding code is still needed.\n\n"
+                        f"{context_bundle.prompt}\n\n"
+                        "Inspect the registered repository and submit one candidate unified diff."
+                    )
+                )
+            ]
+        },
         config={
             "configurable": {"thread_id": thread_id},
             "metadata": {
@@ -197,6 +219,13 @@ def generate_patch_with_agent(
     if messages:
         content = getattr(messages[-1], "content", "")
         final_message = content if isinstance(content, str) else str(content)
+    input_tokens = 0
+    output_tokens = 0
+    for message in messages:
+        usage = getattr(message, "usage_metadata", None) or {}
+        if isinstance(usage, dict):
+            input_tokens += int(usage.get("input_tokens") or 0)
+            output_tokens += int(usage.get("output_tokens") or 0)
     return AgentPatchResult(
         patch_text=sink.patch_text,
         rationale=sink.rationale,
@@ -204,4 +233,7 @@ def generate_patch_with_agent(
         final_message=final_message,
         thread_id=thread_id,
         run_id=run_id,
+        retrieval_context_tokens=context_bundle.estimated_tokens,
+        input_tokens=input_tokens,
+        output_tokens=output_tokens,
     )

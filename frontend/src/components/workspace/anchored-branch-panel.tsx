@@ -15,6 +15,10 @@ import {
   type BranchMessage,
   type BranchRecord,
 } from "@/core/anchored-branch";
+import {
+  listCodeChangeProjects,
+  type CodeChangeProject,
+} from "@/core/code-change";
 import { cn } from "@/lib/utils";
 
 interface AnchoredBranchPanelProps {
@@ -72,6 +76,8 @@ export function AnchoredBranchPanel({
   const [branches, setBranches] = useState<BranchRecord[]>([]);
   const [branch, setBranch] = useState<BranchRecord | null>(null);
   const [messages, setMessages] = useState<BranchMessage[]>([]);
+  const [projects, setProjects] = useState<CodeChangeProject[]>([]);
+  const [projectId, setProjectId] = useState("");
   const [selection, setSelection] = useState<PendingSelection | null>(null);
   const [question, setQuestion] = useState("");
   const [error, setError] = useState("");
@@ -109,6 +115,20 @@ export function AnchoredBranchPanel({
       })
       .catch(() => setError("Branch 列表加载失败"));
   }, [disabled, mainThreadId]);
+
+  useEffect(() => {
+    if (disabled) return;
+    void listCodeChangeProjects()
+      .then((items) => {
+        setProjects(items);
+        setProjectId((current) =>
+          current.length > 0 ? current : (items[0]?.project_id ?? ""),
+        );
+      })
+      .catch(() => {
+        // Code Change can be disabled; Branch still works as an isolated chat.
+      });
+  }, [disabled]);
 
   useEffect(() => {
     if (!branch) {
@@ -153,6 +173,7 @@ export function AnchoredBranchPanel({
       const created = await createAnchoredBranch(
         mainThreadId,
         selection.anchor,
+        projectId,
       );
       setBranches((items) => [created, ...items]);
       setBranch(created);
@@ -260,6 +281,25 @@ export function AnchoredBranchPanel({
         </header>
 
         <div className="border-b p-3">
+          {projects.length > 0 && !branch && (
+            <label className="mb-3 block text-xs">
+              <span className="text-muted-foreground mb-1 block">
+                关联代码仓（Branch 将复用 Hybrid Retrieval）
+              </span>
+              <select
+                className="border-input bg-background w-full rounded-md border px-2 py-2"
+                value={projectId}
+                onChange={(event) => setProjectId(event.target.value)}
+              >
+                <option value="">不关联代码仓</option>
+                {projects.map((project) => (
+                  <option key={project.project_id} value={project.project_id}>
+                    {project.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
           <select
             className="border-input bg-background w-full rounded-md border px-2 py-2 text-sm"
             value={branch?.branch_id ?? ""}
@@ -284,6 +324,11 @@ export function AnchoredBranchPanel({
               <div className="text-muted-foreground mb-1">
                 Anchor · {branch.anchor.message_id}
               </div>
+              {branch.code_change_project_id && (
+                <div className="text-muted-foreground mb-1">
+                  Code Project · {branch.code_change_project_id}
+                </div>
+              )}
               <div className="max-h-28 overflow-y-auto whitespace-pre-wrap">
                 {branch.anchor.text}
               </div>

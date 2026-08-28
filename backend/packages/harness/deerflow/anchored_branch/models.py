@@ -51,6 +51,7 @@ class BranchRecord:
     main_task_summary: str = ""
     relevant_main_context: list[str] = field(default_factory=list)
     main_history: list[str] = field(default_factory=list)
+    code_change_project_id: str = ""
     context_strategy: BranchContextStrategy = BranchContextStrategy.ANCHORED_CONTEXT
     token_budget: int = 6_000
     status: BranchStatus = BranchStatus.ACTIVE

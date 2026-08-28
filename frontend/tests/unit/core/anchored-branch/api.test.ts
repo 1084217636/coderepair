@@ -51,6 +51,23 @@ describe("anchored branch api", () => {
     });
   });
 
+  it("optionally links a registered code project for branch retrieval", async () => {
+    mockedFetch.mockResolvedValueOnce(jsonResponse({ branch_id: "branch-2" }));
+
+    await createAnchoredBranch(
+      "main-1",
+      { text: "validate token", message_id: "answer-1" },
+      "auth-project",
+    );
+
+    const request = mockedFetch.mock.calls[0]![1]!;
+    expect(JSON.parse(request.body as string)).toEqual({
+      main_thread_id: "main-1",
+      anchor: { text: "validate token", message_id: "answer-1" },
+      code_change_project_id: "auth-project",
+    });
+  });
+
   it("loads child messages and closes without an apply payload", async () => {
     mockedFetch
       .mockResolvedValueOnce(

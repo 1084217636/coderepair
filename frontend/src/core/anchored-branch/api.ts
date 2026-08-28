@@ -22,12 +22,19 @@ async function json<T>(response: Response): Promise<T> {
 export async function createAnchoredBranch(
   mainThreadId: string,
   anchor: AnchorSelection,
+  codeChangeProjectId = "",
 ): Promise<BranchRecord> {
   return json(
     await fetch(base(), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ main_thread_id: mainThreadId, anchor }),
+      body: JSON.stringify({
+        main_thread_id: mainThreadId,
+        anchor,
+        ...(codeChangeProjectId
+          ? { code_change_project_id: codeChangeProjectId }
+          : {}),
+      }),
     }),
   );
 }
